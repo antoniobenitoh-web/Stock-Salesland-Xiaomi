@@ -33,31 +33,82 @@ una URL de script.google.com**.
 
 He verificado que `npm run build` termina sin errores con estos cambios.
 
-## ⚠️ Algo importante que debes saber antes de usarla en producción
+## ✅ Ya conectado a Google Sheets real (login + stock reales)
 
-El dashboard principal (`src/App.tsx`) **funciona hoy con datos de
-ejemplo** (`src/data.ts`: productos, tiendas y usuarios inventados) y un
-login que compara contra esos usuarios de ejemplo (todos con contraseña
-`123`). No está conectado a tus Google Sheets reales.
+`App.tsx` ya no usa el login ni el stock de ejemplo por defecto: al
+enviar el formulario de login llama de verdad a tu hoja de `usuarios`, y
+tras entrar descarga tu stock real de la hoja `informe` y sustituye los
+datos de ejemplo en pantalla. Esto se hace a través de dos piezas
+nuevas:
 
-Además, hay un segundo sistema de login sin usar por ningún lado
-(`src/Login/Login.jsx` + `context/AuthContext.jsx`): ese sí intenta
-llamar a una URL de Apps Script (`VITE_GAS_URL` en `.env`) por `POST`
-con `{ action: 'login', ... }`, pero:
-- Nadie lo importa (`main.tsx` renderiza `App.tsx` directamente, no pasa
-  por `Login`), así que ahora mismo es código muerto.
-- El backend de Apps Script que preparé la vez anterior (`Codigo.gs`) es
-  un `HtmlService` que se llama con `google.script.run`, **no** un
-  `doPost` que devuelva JSON — no es compatible con lo que este
-  `AuthContext.jsx` espera. Son dos arquitecturas distintas que no se
-  han conectado entre sí todavía.
+### 1. `apps-script-backend/Codigo.gs` — backend como API JSON
 
-**Esto significa que, tal cual está en este ZIP, la app es una demo
-visual completa y ya instalable como PWA, pero no lee ni escribe tu
-inventario real.** Si quieres que el dashboard use tus Google Sheets
-reales de verdad (login real de usuarios/roles + stock real), dímelo y
-conecto `App.tsx` a un backend de Apps Script tipo API (`doPost`/`doGet`
-devolviendo JSON) en el próximo paso — es un cambio bien delimitado.
+Ya no es un `HtmlService` (no sirve una página HTML propia). Ahora es
+una API que responde a peticiones `POST`:
+
+- `{ action: "login", username, password }` → valida contra tu hoja
+  `usuarios` y devuelve `{ success, user, permisos }`.
+- `{ action: "getStock", user }` → devuelve `{ success, fechaCierre,
+  datos, permisos }` ya filtrado por el rol de ese usuario (Manager ve
+  todo, GPV solo su región, Promotor solo su tienda — igual que antes).
+
+**Tienes que volver a desplegar este backend** en tu proyecto de Apps
+Script (es un cambio de código en el servidor, no solo en GitHub):
+
+1. Abre tu proyecto en https://script.google.com
+2. Sustituye el contenido de tu archivo `.gs` por
+   `apps-script-backend/Codigo.gs`.
+3. En "Configuración del proyecto → appsscript.json visible", sustituye
+   su contenido por `apps-script-backend/appsscript.json`.
+4. **Implementar → Gestionar implementaciones** → pulsa el lápiz ✏️ de tu
+   implementación web existente → en "Versión" elige **Nueva versión** →
+   **Implementar**.
+   - Importante: usa **"Nueva versión" de la implementación existente**,
+     no crees una implementación nueva desde cero — así conservas la
+     misma URL `/exec` y no hace falta tocar `VITE_GAS_URL` en `.env`.
+5. Comprueba que funciona abriendo la URL `/exec` directamente en el
+   navegador: debería devolver un JSON tipo `{"ok":true,"servicio":"Stock
+   Salesland | Xiaomi API",...}` en vez de un error o una página en
+   blanco.
+
+### 2. `src/services/backend.ts` — el frontend habla con esa API
+
+Nuevo archivo con tres funciones:
+- `loginReal(username, password)` — llama a `action: "login"`.
+- `fetchStockReal(user)` — llama a `action: "getStock"`.
+- `transformRawStock(datos)` — convierte las filas "planas" que vienen
+  de tu hoja `informe` (una fila por modelo+tienda+almacén) en la
+  estructura agrupada que ya usaba el dashboard (`StockRecord[]`, con un
+  mapa de stock por modelo dentro de cada tienda+almacén).
+
+`App.tsx` ahora usa estas funciones en `handleLogin` (login real) y en
+una nueva función `loadRealDataFromBackend` (stock real), reutilizando
+el mismo mecanismo de guardado en `localStorage` y el mismo badge verde
+que ya existía para la importación manual de Excel — por eso, tras
+iniciar sesión, verás algo como *"Datos de Stock actualizados desde
+Google Sheets: Google Sheets · cierre dd/mm/yyyy"*.
+
+### Limitaciones a tener en cuenta
+
+- **`dos` (days of stock):** tu hoja `informe` no trae esa métrica, así
+  que se rellena a `0` para todos los modelos. Si en el futuro añades esa
+  columna a la hoja, solo hay que editar `transformRawStock` en
+  `src/services/backend.ts` para leerla en vez de poner `0`.
+- **`price` (precio):** tampoco viene en la hoja `informe`, se deja a
+  `0`. Si tienes un precio de referencia en otra hoja, dímelo y lo
+  incorporamos.
+- **CORS:** el `fetch` a Apps Script se hace sin fijar `Content-Type`,
+  a propósito — así el navegador lo manda como `text/plain` y evita el
+  *preflight* `OPTIONS`, que Apps Script no sabe responder. No añadas
+  cabeceras a esa llamada o se romperá la conexión.
+- El login y el stock de ejemplo (`src/data.ts`) se quedan como
+  *fallback* solo mientras no has iniciado sesión (pantalla de login) o
+  si pulsas "Restablecer a plantilla" — no se borran, por si quieres
+  usarlos para hacer una demo sin tocar datos reales.
+- El segundo sistema de login que existía sin usar (`src/Login/Login.jsx`
+  + `context/AuthContext.jsx`) sigue ahí sin usarse — es código muerto
+  heredado, no le des importancia; toda la lógica real vive ahora en
+  `App.tsx` + `src/services/backend.ts`.
 
 ## 🚀 Cómo publicarlo (GitHub Pages, gratis, con URL propia)
 

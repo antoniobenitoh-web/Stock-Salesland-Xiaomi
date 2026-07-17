@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import { products as initialProducts, users, stockRecords as initialStockRecords, schedules } from './data';
 import { AlmacenType, StockRecord, UserProfile, Product } from './types';
 import { initAuth, googleSignIn, logout, listDriveFiles, downloadDriveFile, DriveFile } from './googleDrive';
+import { loginReal, fetchStockReal, mapBackendUserToProfile, transformRawStock, BackendUser } from './services/backend';
 import { 
   Building2, 
   ChevronDown, 
@@ -172,6 +173,8 @@ export default function App() {
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isSyncingRealStock, setIsSyncingRealStock] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserProfile>(users[0]); 
   const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -454,24 +457,63 @@ export default function App() {
     });
   }, [currentUser, activeFilters]);
 
-  // Handle Login submission
-  const handleLogin = (e: FormEvent) => {
+  // Descarga el stock real desde Google Sheets (vía Apps Script) y lo
+  // transforma al formato que usa el resto del dashboard. Reutiliza el
+  // mismo mecanismo de persistencia (localStorage + badge "importLog")
+  // que ya usaba la importación manual de Excel.
+  const loadRealDataFromBackend = async (backendUser: BackendUser) => {
+    setIsSyncingRealStock(true);
+    setImportError('');
+    try {
+      const resp = await fetchStockReal(backendUser);
+      if (!resp.success || !resp.datos) {
+        setImportError(resp.error || 'No se pudieron cargar los datos de stock reales.');
+        return;
+      }
+      const { stockRecords: realRecords, products: realProducts } = transformRawStock(resp.datos);
+
+      setStockRecordsState(realRecords);
+      setProductsState(realProducts);
+      localStorage.setItem('xiaomi_stock_records', JSON.stringify(realRecords));
+      localStorage.setItem('xiaomi_products', JSON.stringify(realProducts));
+
+      const finalLog = {
+        rows: resp.datos.length,
+        stores: new Set(realRecords.map((r) => r.storeName)).size,
+        products: realProducts.length,
+        fileName: `Google Sheets · cierre ${resp.fechaCierre || 'N/D'}`,
+      };
+      setImportLog(finalLog);
+      localStorage.setItem('xiaomi_import_log', JSON.stringify(finalLog));
+    } catch (err: any) {
+      setImportError(`Error sincronizando stock real: ${err.message || err}`);
+    } finally {
+      setIsSyncingRealStock(false);
+    }
+  };
+
+  // Handle Login submission — valida contra la hoja real de usuarios de
+  // Google Sheets a través del backend de Apps Script (acción "login").
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
-    const user = users.find(
-      (u) => u.username.toLowerCase() === loginUsername.trim().toLowerCase()
-    );
-    if (!user) {
-      setLoginError('Usuario no encontrado');
-      return;
-    }
-    if (user.password !== loginPassword) {
-      setLoginError('Contraseña incorrecta');
-      return;
-    }
-    // Success! Set user and log in
     setLoginError('');
-    setIsLoggedIn(true);
-    handleUserChange(user);
+    setIsLoggingIn(true);
+    try {
+      const resp = await loginReal(loginUsername.trim(), loginPassword);
+      if (!resp.success || !resp.user) {
+        setLoginError(resp.error || 'No se pudo iniciar sesión.');
+        return;
+      }
+      const profile = mapBackendUserToProfile(resp.user);
+      setIsLoggedIn(true);
+      handleUserChange(profile);
+      // Carga el stock real en segundo plano; si falla, el usuario ya
+      // está dentro y verá el aviso de error en el panel de importación
+      // en vez de quedarse bloqueado en el login.
+      loadRealDataFromBackend(resp.user);
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
 
   // Parser helper for "informe" spreadsheets
@@ -727,42 +769,17 @@ export default function App() {
 
             <button
               type="submit"
-              className="w-full py-2.5 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-600/10 hover:shadow-indigo-500/20 hover:scale-[1.01] transition-all cursor-pointer"
+              disabled={isLoggingIn}
+              className="w-full py-2.5 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-xs shadow-md shadow-indigo-600/10 hover:shadow-indigo-500/20 hover:scale-[1.01] transition-all cursor-pointer"
             >
-              Iniciar Sesión
+              {isLoggingIn ? 'Comprobando credenciales...' : 'Iniciar Sesión'}
             </button>
           </form>
 
-          <div className="pt-3 border-t border-[#145a70]/50 text-center space-y-2">
-            <p className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">
-              Cuentas de Acceso de Prueba
-            </p>
-            <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-300 font-medium bg-[#104a60]/30 p-2.5 rounded-lg border border-[#145a70]/40">
-              <div className="text-left border-r border-[#145a70]/50 pr-2 space-y-1">
-                <div>
-                  <span className="text-indigo-300 font-bold uppercase">1. Admin / AM:</span><br />
-                  User: <span className="font-mono text-white font-bold">administradora</span><br />
-                  Pass: <span className="font-mono text-slate-300">admin123</span>
-                </div>
-                <div className="pt-1 border-t border-[#145a70]/30">
-                  User: <span className="font-mono text-white font-bold">am</span><br />
-                  Pass: <span className="font-mono text-slate-300">am123</span>
-                </div>
-              </div>
-              <div className="text-left pl-1 space-y-1">
-                <div>
-                  <span className="text-emerald-300 font-bold uppercase">2. GPV / Promotor:</span><br />
-                  User: <span className="font-mono text-white font-bold">gpv</span><br />
-                  Pass: <span className="font-mono text-white font-bold">gpv</span>
-                </div>
-                <div className="pt-1 border-t border-[#145a70]/30">
-                  User: <span className="font-mono text-white font-bold">promotor</span><br />
-                  Pass: <span className="font-mono text-white font-bold">promotor</span>
-                </div>
-              </div>
-            </div>
-            <p className="text-[9px] text-slate-400 italic mt-1 leading-normal">
-              Accede con <strong>administradora</strong> o <strong>am</strong> para ver todas las regiones; con <strong>gpv</strong> para ver su región asignada; o con <strong>promotor</strong> para ver únicamente su centro asignado.
+          <div className="pt-3 border-t border-[#145a70]/50 text-center">
+            <p className="text-[10px] text-slate-400 font-medium">
+              Acceso con tu usuario y contraseña reales de Salesland | Xiaomi.
+              ¿Problemas para entrar? Contacta a tu AM o Coordinadora.
             </p>
           </div>
         </div>
@@ -1047,6 +1064,22 @@ export default function App() {
         {/* Main Panel View Area */}
         <main className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar space-y-6 pb-24 lg:pb-12">
           
+          {/* Sincronizando stock real desde Apps Script */}
+          {isSyncingRealStock && (
+            <div className="bg-indigo-50 border border-indigo-200 px-4 py-2.5 rounded-xl flex items-center gap-2 text-xs text-indigo-800 font-semibold shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shrink-0"></span>
+              <span>Sincronizando stock real desde Google Sheets...</span>
+            </div>
+          )}
+
+          {/* Error al sincronizar con el backend real */}
+          {importError && !isSyncingRealStock && (
+            <div className="bg-rose-50 border border-rose-200 px-4 py-2.5 rounded-xl flex items-center gap-2 text-xs text-rose-800 font-semibold shadow-xs">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>{importError}</span>
+            </div>
+          )}
+
           {/* Status badge when using custom Google Sheets data */}
           {importLog && (
             <div className="bg-emerald-50 border border-emerald-200 px-4 py-2.5 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-emerald-800 font-semibold shadow-xs">

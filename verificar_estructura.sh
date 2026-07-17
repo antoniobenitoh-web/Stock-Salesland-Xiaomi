@@ -13,8 +13,11 @@ REQUIRED_FILES=(
   "firebase-applet-config.json"
   "src/App.tsx"
   "src/main.tsx"
+  "src/services/backend.ts"
   "public/icon-192.png"
   "public/icon-512.png"
+  "apps-script-backend/Codigo.gs"
+  "apps-script-backend/appsscript.json"
 )
 
 MISSING=0
