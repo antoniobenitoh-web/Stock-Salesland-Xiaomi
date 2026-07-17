@@ -1,6 +1,0 @@
-{
-  "name": "Gestión de Stock Xiaomi",
-  "description": "Aplicación corporativa de Salesland para consultar inventarios día a día y análisis de segmentos GFK con control de permisos por rol.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
