@@ -32,17 +32,55 @@ const CONFIG = {
 // ENRUTADORES PRINCIPALES
 // ─────────────────────────────────────────
 
-// GET: solo para comprobar rápidamente en el navegador que el backend
-// está vivo (abrir la URL /exec directamente). No sirve HTML de verdad.
-function doGet() {
-  return jsonResponse({
-    ok: true,
-    servicio: 'Stock Salesland | Xiaomi API',
-    uso: 'Este endpoint espera peticiones POST con { action, ... } en el cuerpo.'
-  });
+// GET: aquí es donde llega ahora la llamada real del frontend (ver nota
+// más abajo sobre por qué se usa GET en vez de POST). Si no viene
+// ?action=..., simplemente devuelve un JSON de estado para comprobar
+// rápidamente en el navegador que el backend está vivo.
+//
+// NOTA IMPORTANTE SOBRE POST vs GET:
+// Al llamar a este Web App con fetch(POST) desde un dominio externo
+// (p. ej. GitHub Pages), Google redirige internamente la petición
+// (script.google.com -> script.googleusercontent.com) y esa redirección
+// no siempre añade las cabeceras CORS correctas para método POST, así
+// que el navegador bloquea la respuesta con "Failed to fetch" aunque el
+// backend funcione bien. Con GET esa redirección sí funciona de forma
+// fiable. Por eso el frontend (src/services/backend.ts) manda todo por
+// GET, con los datos codificados en la propia URL (?action=...&payload=...).
+function doGet(e) {
+  const params = (e && e.parameter) || {};
+  if (!params.action) {
+    return jsonResponse({
+      ok: true,
+      servicio: 'Stock Salesland | Xiaomi API',
+      uso: 'Este endpoint espera peticiones GET con ?action=login|getStock&payload=<JSON codificado>'
+    });
+  }
+
+  let payload = {};
+  try {
+    if (params.payload) payload = JSON.parse(params.payload);
+  } catch (err) {
+    return jsonResponse({ success: false, error: 'Parámetro "payload" inválido (JSON mal formado): ' + err.message });
+  }
+
+  try {
+    switch (params.action) {
+      case 'login':
+        return handleLoginAction(payload);
+      case 'getStock':
+        return handleGetStockAction(payload);
+      default:
+        return jsonResponse({ success: false, error: 'Acción no reconocida: ' + params.action });
+    }
+  } catch (err) {
+    return jsonResponse({ success: false, error: err.message });
+  }
 }
 
-// POST: aquí llega todo lo que hace el frontend (login y datos de stock).
+// POST: se deja también disponible por si en el futuro quieres llamarlo
+// desde un entorno sin las limitaciones de CORS del navegador (por
+// ejemplo, otro backend, Postman, o un Apps Script a Apps Script). El
+// frontend web ya NO usa esta vía por el motivo explicado arriba.
 function doPost(e) {
   let body;
   try {

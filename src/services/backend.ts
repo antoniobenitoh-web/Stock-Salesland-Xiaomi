@@ -43,20 +43,25 @@ interface StockResponse {
   error?: string;
 }
 
-// Llamada genérica al backend. IMPORTANTE: no fijamos manualmente la
-// cabecera Content-Type. Al dejar que el navegador use "text/plain" por
-// defecto para un body de tipo string, la petición sigue considerándose
-// "simple" y no dispara un preflight OPTIONS, que Apps Script no sabe
-// responder. Si añades headers aquí, romperás la conexión con CORS.
+// Llamada genérica al backend, por GET con los datos codificados en la
+// propia URL. IMPORTANTE: no cambies esto a POST sin más — Apps Script
+// redirige internamente cada petición (script.google.com ->
+// script.googleusercontent.com) y esa redirección no siempre trae las
+// cabeceras CORS correctas para POST, lo que provoca un "Failed to
+// fetch" en el navegador aunque el backend funcione bien. Con GET la
+// redirección sí es fiable. El "payload" (usuario/contraseña o el
+// objeto de sesión) va codificado como JSON en un parámetro de la URL;
+// como todo viaja por HTTPS, sigue yendo cifrado en tránsito, aunque
+// quede visible en el historial del navegador y en el registro de
+// ejecuciones de Apps Script — ten esto en cuenta si más adelante
+// quieres reforzarlo (por ejemplo, limitando qué ve ese registro).
 async function callBackend<T>(action: string, payload: Record<string, unknown>): Promise<T> {
   if (!GAS_URL) {
     return { success: false, error: 'VITE_GAS_URL no está configurada (revisa el archivo .env).' } as unknown as T;
   }
   try {
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action, ...payload }),
-    });
+    const url = `${GAS_URL}?action=${encodeURIComponent(action)}&payload=${encodeURIComponent(JSON.stringify(payload))}`;
+    const res = await fetch(url, { method: 'GET' });
     if (!res.ok) {
       return { success: false, error: `El servidor respondió ${res.status} ${res.statusText}` } as unknown as T;
     }
