@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Stock Avanzado - Salesland | Xiaomi</title>
+    <meta name="theme-color" content="#104A60">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Stock Xiaomi">
+    <link rel="icon" type="image/png" href="icons/favicon.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --xiaomi-orange: #FF6700;
+            --salesland-blue: #104A60; 
+            --bg-main: #f4f6f8;
+            --bg-card: #ffffff;
+            --text-main: #212529;
+            --text-muted: #6c757d;
+            --border-color: #e9ecef;
+            --sidebar-width: 310px;
+            --radius: 12px;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+            --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            
+            --color-tienda: #0ca678;
+            --color-transito: #ff922b;
+            --color-crossdock: #4c6ef5;
+            --color-exposicion: #7048e8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: var(--font); background-color: var(--bg-main); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+
+        /* PANTALLA DE CARGA */
+        .loading-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #fff; z-index: 9999; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 16px; font-weight: 600;
+        }
+        .spinner { width: 40px; height: 40px; border: 4px solid var(--border-color); border-top: 4px solid var(--xiaomi-orange); border-radius: 50%; animation: spin 1s linear infinite; }
+
+        /* PANTALLA DE LOGIN */
+        .login-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, var(--salesland-blue) 0%, #0b3444 100%);
+            z-index: 9998; display: flex; align-items: center; justify-content: center; padding: 16px;
+        }
+        .login-card {
+            background-color: #ffffff; border-radius: var(--radius); box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+            padding: 32px 28px; width: 100%; max-width: 340px;
+        }
+        .login-logos { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        .login-logos img { height: 26px; width: auto; object-fit: contain; }
+        .login-title { text-align: center; font-size: 1rem; font-weight: 700; color: var(--salesland-blue); margin-bottom: 20px; }
+        .login-field { margin-bottom: 14px; }
+        .login-field label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
+        .login-field input {
+            width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;
+            font-size: 0.9rem; outline: none;
+        }
+        .login-field input:focus { border-color: var(--xiaomi-orange); }
+        .btn-login {
+            width: 100%; padding: 11px; background-color: var(--xiaomi-orange); border: none; border-radius: 8px;
+            color: #fff; font-weight: 700; cursor: pointer; font-size: 0.9rem; margin-top: 4px;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-login:hover { opacity: 0.92; }
+        .btn-login:disabled { opacity: 0.6; cursor: not-allowed; }
+        .login-error {
+            background-color: #fff5f5; color: #e03131; border: 1px solid #ffc9c9; border-radius: 8px;
+            padding: 8px 12px; font-size: 0.78rem; margin-bottom: 14px; display: none;
+        }
+        .login-error.show { display: block; }
+        .login-footnote { text-align: center; font-size: 0.68rem; color: var(--text-muted); margin-top: 14px; }
+
+        .btn-logout { width: 100%; padding: 10px; background-color: rgba(224, 49, 49, 0.15); border: 1px solid rgba(224, 49, 49, 0.4); border-radius: 8px; color: #ff8787; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; }
+        .btn-logout:hover { background-color: rgba(224, 49, 49, 0.28); }
+        .filter-group.perm-hidden { display: none; }
+        .nav-user-badge {
+            display: flex; align-items: center; gap: 6px; background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15); padding: 5px 12px; border-radius: 20px;
+            font-size: 0.75rem; font-weight: 600; color: #e9ecef; white-space: nowrap; margin-right: 8px;
+        }
+        @media (max-width: 768px) { .nav-user-badge { display: none; } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* SIDEBAR FILTROS */
+        .sidebar {
+            width: var(--sidebar-width); background-color: var(--salesland-blue); border-right: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex; flex-direction: column; height: 100%; flex-shrink: 0;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 100;
+        }
+        .sidebar.collapsed { transform: translateX(-100%); position: absolute; }
+        .sidebar-header { padding: 16px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: space-between; }
+        
+        .brand-container { display: flex; align-items: center; gap: 12px; }
+        .logo-salesland { font-weight: 800; font-size: 1.3rem; color: #ffffff; letter-spacing: -0.5px; text-transform: lowercase; }
+        .logo-salesland span { color: #00aae4; }
+        
+        .logo-xiaomi-container {
+            width: 34px; height: 34px; background-color: var(--xiaomi-orange); 
+            border-radius: 10px; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 8px rgba(255, 103, 0, 0.3); flex-shrink: 0;
+        }
+        .logo-xiaomi-text { color: #ffffff; font-family: "Arial", sans-serif; font-weight: bold; font-size: 1.05rem; letter-spacing: -0.5px; line-height: 1; margin-bottom: 2px; }
+
+        .btn-close-sidebar { background: none; border: none; color: #adb5bd; cursor: pointer; }
+        .sidebar-content { padding: 16px 20px; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; gap: 14px; }
+        .sidebar-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: #adb5bd; margin-bottom: 2px; display: flex; align-items: center; gap: 8px; }
+        
+        /* DISEÑO FILTROS */
+        .filter-group { display: flex; flex-direction: column; position: relative; }
+        .filter-group label { font-size: 0.75rem; font-weight: 600; margin-bottom: 4px; color: #dee2e6; }
+        
+        .dropdown-trigger {
+            width: 100%; padding: 8px 12px; border: 1px solid rgba(255, 255, 255, 0.15); 
+            border-radius: 8px; font-size: 0.82rem; background-color: rgba(255, 255, 255, 0.08); 
+            color: #ffffff; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+        }
+        .dropdown-trigger:focus { border-color: var(--xiaomi-orange); }
+        .dropdown-trigger span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90%; }
+
+        .dropdown-list {
+            display: none; position: absolute; top: 100%; left: 0; width: 100%; 
+            max-height: 180px; overflow-y: auto; background-color: #104A60; border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px; z-index: 200; margin-top: 4px; box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+        .dropdown-list.show { display: block; }
+        
+        .dropdown-item {
+            display: flex; align-items: center; gap: 10px; padding: 8px 12px; 
+            color: #ffffff; font-size: 0.82rem; cursor: pointer; transition: background 0.15s;
+        }
+        .dropdown-item:hover { background-color: rgba(255, 255, 255, 0.08); }
+        .dropdown-item input[type="checkbox"] {
+            accent-color: var(--xiaomi-orange); width: 14px; height: 14px; cursor: pointer;
+        }
+
+        .btn-clear-filters { width: 100%; padding: 11px; background-color: rgba(255, 255, 255, 0.12); border: none; border-radius: 8px; color: #ffffff; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s; margin-top: 4px; margin-bottom: 12px; }
+        .btn-clear-filters:hover { background-color: rgba(255, 255, 255, 0.22); }
+
+        /* CONTENEDOR PRINCIPAL */
+        .main-container { flex-grow: 1; display: flex; flex-direction: column; height: 100%; overflow: hidden; width: 100%; }
+        
+        /* NAVBAR COMPACTO */
+        .navbar { background-color: var(--salesland-blue); border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; align-items: center; padding: 0 20px; height: 50px; flex-shrink: 0; gap: 20px; justify-content: space-between; }
+        .nav-left { display: flex; align-items: center; gap: 8px; flex-grow: 1; overflow: hidden; height: 100%; }
+        .btn-toggle-filters { background-color: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); padding: 6px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 500; color: #ffffff; }
+        .btn-toggle-filters:hover { border-color: var(--xiaomi-orange); background-color: rgba(255, 255, 255, 0.15); }
+
+        /* MARCA FECHA DE ACTUALIZACIÓN */
+        .nav-right-date {
+            display: flex; align-items: center; gap: 6px; background-color: rgba(255, 255, 255, 0.1); 
+            border: 1px solid rgba(255, 255, 255, 0.15); padding: 5px 12px; border-radius: 20px; 
+            font-size: 0.78rem; font-weight: 600; color: #e9ecef; white-space: nowrap;
+        }
+        .nav-right-date strong { color: var(--xiaomi-orange); }
+
+        /* TABS PC */
+        .nav-tabs-pc { display: flex; gap: 2px; height: 100%; align-items: flex-end; overflow-x: auto; }
+        .nav-tab { padding: 10px 14px; color: #adb5bd; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; display: flex; align-items: center; justify-content: center; background: transparent; transition: all 0.2s; }
+        .nav-tab i { width: 18px; height: 18px; }
+        .nav-tab:hover { color: #ffffff; background: rgba(255, 255, 255, 0.05); }
+        .nav-tab.active { color: var(--xiaomi-orange); border-bottom-color: var(--xiaomi-orange); }
+
+        /* TABS MÓVIL */
+        .nav-tabs-mobile-container { display: none; width: 100%; max-width: 150px; }
+        .nav-tabs-mobile-select { width: 100%; padding: 6px; border: 1px solid var(--xiaomi-orange); border-radius: 8px; background-color: rgba(255, 255, 255, 0.1); color: #ffffff; outline: none; font-size: 0.8rem; }
+        .nav-tabs-mobile-select option { background-color: var(--salesland-blue); color: #fff; }
+
+        /* BARRA DE BÚSQUEDA Y CONTROL SEGMENTADO */
+        .search-container-bar { 
+            display: flex; align-items: center; background-color: var(--salesland-blue); 
+            padding: 6px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); 
+            gap: 12px; min-height: 44px; flex-shrink: 0;
+        }
+        .search-icon-left { color: #adb5bd; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        
+        .search-wrapper { flex-grow: 1; max-width: 260px; }
+        .search-wrapper input { width: 100%; padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.15); outline: none; font-size: 0.82rem; background-color: rgba(255, 255, 255, 0.08); color: #ffffff; }
+        .search-wrapper input:focus { border-color: var(--xiaomi-orange); background-color: rgba(255, 255, 255, 0.12); }
+
+        /* CONMUTADOR TÁCTICO */
+        .gfk-toggle-container {
+            display: none; background-color: rgba(0, 0, 0, 0.2); padding: 3px; 
+            border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.12); flex-shrink: 0;
+        }
+        .gfk-toggle-btn {
+            background: transparent; border: none; padding: 5px 12px; font-size: 0.78rem; 
+            font-weight: 600; color: #adb5bd; border-radius: 6px; cursor: pointer; 
+            transition: all 0.2s ease; display: flex; align-items: center; gap: 5px;
+        }
+        .gfk-toggle-btn.active {
+            background-color: var(--xiaomi-orange); color: #ffffff;
+            box-shadow: 0 2px 6px rgba(255, 103, 0, 0.3);
+        }
+
+        .active-filters-summary { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; overflow-x: auto; flex-grow: 2; }
+        .filter-badge { background-color: rgba(255, 255, 255, 0.12); color: #e9ecef; padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 500; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+        .filter-badge strong { color: var(--xiaomi-orange); font-weight: 700; }
+
+        /* WORKSPACE */
+        .view-workspace { padding: 16px; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; gap: 16px; }
+        
+        /* GRID KPIs */
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; flex-shrink: 0; }
+        .kpi-card { background-color: var(--bg-card); border-radius: var(--radius); padding: 12px 16px; border: 1px solid var(--border-color); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: space-between; }
+        .kpi-info h3 { font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px; letter-spacing: 0.3px; }
+        .kpi-info .kpi-value { font-size: 1.25rem; font-weight: 700; }
+        .kpi-icon-wrapper { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .kpi-card:nth-child(1) .kpi-icon-wrapper { background-color: #e3faf2; color: var(--color-tienda); }
+        .kpi-card:nth-child(2) .kpi-icon-wrapper { background-color: #fff4e6; color: var(--color-transito); }
+        .kpi-card:nth-child(3) .kpi-icon-wrapper { background-color: #edf2ff; color: var(--color-crossdock); }
+        .kpi-card:nth-child(4) .kpi-icon-wrapper { background-color: #f3f0ff; color: var(--color-exposicion); }
+
+        /* GRÁFICO */
+        .chart-card { background-color: var(--bg-card); border-radius: var(--radius); padding: 14px; border: 1px solid var(--border-color); box-shadow: var(--shadow); flex-shrink: 0; width: 100%; }
+        .chart-card-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; color: #495057; }
+        .chart-wrapper { position: relative; height: 110px; width: 100%; }
+
+        /* TABLAS DE DETALLE */
+        .store-blocks-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; flex-shrink: 0; }
+        .table-container { background-color: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border-color); box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; }
+        
+        .table-header { padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); color: white; }
+        .header-tienda { background-color: var(--color-tienda); }
+        .header-transito { background-color: var(--color-transito); }
+        .header-crossdock { background-color: var(--color-crossdock); }
+        .header-exposicion { background-color: var(--color-exposicion); }
+        .table-title { font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        
+        .table-scroll-container { overflow-y: auto; height: 260px; width: 100%; background: #fff; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.8rem; table-layout: fixed; }
+        
+        /* CABECERAS DE TABLA ORDENABLES */
+        thead th { position: sticky; top: 0; background-color: #f1f3f5; color: #495057; font-weight: 600; padding: 8px 12px; border-bottom: 1px solid var(--border-color); z-index: 10; }
+        thead th.sortable { cursor: pointer; user-select: none; }
+        thead th.sortable:hover { background-color: #e9ecef; color: var(--xiaomi-orange); }
+        .sort-indicator { font-size: 0.65rem; margin-left: 4px; display: inline-block; vertical-align: middle; opacity: 0.5; }
+        thead th.sortable:hover .sort-indicator { opacity: 1; }
+        
+        td { padding: 8px 12px; border-bottom: 1px solid var(--border-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        tr:hover td { background-color: #fafbfc; }
+        
+        /* FILAS SUB-CABECERAS INTERACTIVAS */
+        .row-subgroup-gfk { background-color: #f1f3f5 !important; cursor: pointer; user-select: none; transition: background 0.15s; }
+        .row-subgroup-gfk:hover { background-color: #e9ecef !important; }
+        .row-subgroup-gfk td { padding: 7px 12px; color: var(--salesland-blue); font-weight: 700; font-size: 0.76rem; border-bottom: 1px solid #dee2e6; }
+        
+        .subgroup-title-wrapper { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+        .badge-title-side { display: flex; align-items: center; gap: 6px; }
+        .badge-gfk-inline { background-color: var(--salesland-blue); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: bold; }
+        .toggle-icon-gfk { font-size: 0.7rem; color: var(--text-muted); font-weight: bold; transition: transform 0.2s; margin-left: 4px; }
+        
+        .row-detail-gfk.is-hidden { display: none; }
+        .row-subgroup-gfk.is-expanded .toggle-icon-gfk { transform: rotate(90deg); }
+
+        .table-footer-summary { padding: 8px 14px; border-top: 1px solid var(--border-color); background-color: #f8f9fa; font-size: 0.75rem; color: var(--text-main); font-weight: 700; display: flex; justify-content: space-between; }
+
+        .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.25); z-index: 90; backdrop-filter: blur(2px); }
+        .sidebar-overlay.active { display: block; }
+
+        @media (max-width: 1200px) { .store-blocks-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 1024px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; flex-shrink: 0; } }
+        @media (max-width: 768px) {
+            .sidebar { position: fixed; left: 0; top: 0; transform: translateX(-100%); }
+            .sidebar:not(.collapsed) { transform: translateX(0); }
+            .nav-tabs-pc { display: none; }
+            .nav-tabs-mobile-container { display: block; }
+            .kpi-grid { grid-template-columns: 1fr; }
+            .view-workspace { padding: 10px; }
+            .search-container-bar { flex-direction: column; align-items: stretch; gap: 8px; }
+            .search-wrapper { max-width: 100%; }
+            .navbar { padding: 0 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-screen" id="login-screen" style="display:none;">
+        <div class="login-card">
+            <div class="login-logos">
+                <img src="https://lh3.googleusercontent.com/d/1M-Z2J2bxhZX5Z10wa8J6JX2aIQMMkZ8A" alt="Salesland">
+                <span style="color:#ccc; font-weight:300;">|</span>
+                <img src="https://lh3.googleusercontent.com/d/10TTfNsgIyjTowOZyr5Cd0yxjbMXBoEGm" alt="Xiaomi">
+            </div>
+            <div class="login-title">Acceso Dashboard de Stock</div>
+            <div class="login-error" id="login-error"></div>
+            <form id="login-form">
+                <div class="login-field">
+                    <label>Usuario</label>
+                    <input type="text" id="login-user" autocomplete="username" required>
+                </div>
+                <div class="login-field">
+                    <label>Contraseña</label>
+                    <input type="password" id="login-pass" autocomplete="current-password" required>
+                </div>
+                <button type="submit" class="btn-login" id="btn-login">
+                    <i data-lucide="log-in" style="width:16px; height:16px;"></i> Entrar
+                </button>
+            </form>
+            <p class="login-footnote">Acceso con tu usuario y contraseña de Salesland | Xiaomi.</p>
+        </div>
+    </div>
+
+    <div class="loading-screen" id="loading-screen" style="display:none;">
+        <div class="spinner"></div>
+        <div id="loading-text">Iniciando Ecosistema de Stock Inteligente...</div>
+    </div>
+
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <aside class="sidebar" id="sidebar-menu">
+        <div class="sidebar-header">
+            <div class="brand-container" style="display: flex; align-items: center; gap: 10px; width: 100%; max-width: 240px;">
+                <img src="https://lh3.googleusercontent.com/d/1M-Z2J2bxhZX5Z10wa8J6JX2aIQMMkZ8A" 
+                     alt="Salesland" 
+                     style="height: 22px; width: auto; object-fit: contain; filter: drop-shadow(0px 1px 2px rgba(0,0,0,0.2));">
+                
+                <span style="color: rgba(255, 255, 255, 0.25); font-weight: 300; font-size: 1.1rem; margin: 0 2px;">|</span>
+                
+                <img src="https://lh3.googleusercontent.com/d/10TTfNsgIyjTowOZyr5Cd0yxjbMXBoEGm" 
+                     alt="Xiaomi" 
+                     style="height: 24px; width: auto; object-fit: contain;">
+            </div>
+            <button class="btn-close-sidebar" id="btn-close-filters"><i data-lucide="x" style="width:18px; height:18px;"></i></button>
+        </div>
+        <div class="sidebar-content">
+            <div class="sidebar-title"><i data-lucide="sliders-horizontal" style="width:14px; height:14px;"></i> Multifiltros Activos</div>
+            
+            <div class="filter-group" data-filter-key="Familia">
+                <label>Familia Corporativa</label>
+                <div class="dropdown-trigger" onclick="toggleDropdown('dropdown-familia')"><span id="txt-familia">Todos</span><i data-lucide="chevron-down" style="width:14px; height:14px;"></i></div>
+                <div class="dropdown-list" id="dropdown-familia"></div>
+            </div>
+
+            <div class="filter-group" data-filter-key="SubFamilia">
+                <label>SubFamilia</label>
+                <div class="dropdown-trigger" onclick="toggleDropdown('dropdown-subfamilia')"><span id="txt-subfamilia">Todos</span><i data-lucide="chevron-down" style="width:14px; height:14px;"></i></div>
+                <div class="dropdown-list" id="dropdown-subfamilia"></div>
+            </div>
+
+            <div class="filter-group" data-filter-key="Modelo">
+                <label>Modelo / Producto</label>
+                <div class="dropdown-trigger" onclick="toggleDropdown('dropdown-modelo')"><span id="txt-modelo">Todos</span><i data-lucide="chevron-down" style="width:14px; height:14px;"></i></div>
+                <div class="dropdown-list" id="dropdown-modelo"></div>
+            </div>
+
+            <div class="filter-group" data-filter-key="Region">
+                <label>Región</label>
+                <div class="dropdown-trigger" onclick="toggleDropdown('dropdown-region')"><span id="txt-region">Todos</span><i data-lucide="chevron-down" style="width:14px; height:14px;"></i></div>
+                <div class="dropdown-list" id="dropdown-region"></div>
+            </div>
+
+            <div class="filter-group" data-filter-key="Zona">
+                <label>Zona</label>
+                <div class="dropdown-trigger" onclick="toggleDropdown('dropdown-zona')"><span id="txt-zona">Todos</span><i data-lucide="chevron-down" style="width:14px; height:14px;"></i></div>
+                <div class="dropdown-list" id="dropdown-zona"></div>
+            </div>
+
+            <div class="filter-group" data-filter-key="PR">
+                <label>PR (Punto de Venta)</label>
+                <div class="dropdown-trigger" onclick="toggleDropdown('dropdown-pr')"><span id="txt-pr">Todos</span><i data-lucide="chevron-down" style="width:14px; height:14px;"></i></div>
+                <div class="dropdown-list" id="dropdown-pr"></div>
+            </div>
+
+            <div class="filter-group" data-filter-key="StoreName">
+                <label>Store Name</label>
+                <div class="dropdown-trigger" onclick="toggleDropdown('dropdown-store')"><span id="txt-store">Todos</span><i data-lucide="chevron-down" style="width:14px; height:14px;"></i></div>
+                <div class="dropdown-list" id="dropdown-store"></div>
+            </div>
+
+            <button class="btn-clear-filters" id="btn-reset-filters"><i data-lucide="rotate-ccw" style="width:14px; height:14px;"></i> Limpiar Filtros</button>
+            <button class="btn-logout" id="btn-logout"><i data-lucide="log-out" style="width:14px; height:14px;"></i> Cerrar sesión</button>
+        </div>
+    </aside>
+
+    <div class="main-container">
+        <nav class="navbar">
+            <div class="nav-left">
+                <button class="btn-toggle-filters" id="btn-toggle-menu">
+                    <i data-lucide="menu" style="width:16px; height:16px;"></i><span>Filtros</span>
+                </button>
+                
+                <div class="nav-tabs-pc" id="dynamic-tabs-pc">
+                    <div class="nav-tab active" data-tab="general" title="Vista General Corporativa">
+                        <i data-lucide="layout-dashboard"></i>
+                    </div>
+                </div>
+
+                <div class="nav-tabs-mobile-container">
+                    <select class="nav-tabs-mobile-select" id="dynamic-tabs-mobile">
+                        <option value="general">📊 General</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="nav-user-badge" id="nav-user-badge">
+                <i data-lucide="user" style="width:13px; height:13px; color:var(--xiaomi-orange);"></i>
+                <span id="lbl-usuario-nombre">-</span>
+            </div>
+            <div class="nav-right-date">
+                <i data-lucide="calendar" style="width:14px; height:14px; color:var(--xiaomi-orange);"></i>
+                <span>actualizado cierre: <strong id="lbl-fecha-cierre">...</strong></span>
+            </div>
+        </nav>
+
+        <div class="search-container-bar">
+            <div class="search-icon-left">
+                <i data-lucide="search" style="width:18px; height:18px;"></i>
+            </div>
+            <div class="search-wrapper">
+                <input type="text" id="global-search" placeholder="Buscar por modelo...">
+            </div>
+
+            <div class="gfk-toggle-container" id="gfk-view-toggle">
+                <button class="gfk-toggle-btn active" id="btn-view-prod" onclick="setViewMode('producto')">
+                    <i data-lucide="package" style="width:13px; height:13px;"></i>Detalle
+                </button>
+                <button class="gfk-toggle-btn" id="btn-view-gfk" onclick="setViewMode('gfk')">
+                    <i data-lucide="grid" style="width:13px; height:13px;"></i>Segmentos GFK
+                </button>
+            </div>
+
+            <div class="active-filters-summary" id="active-filters-summary"></div>
+        </div>
+
+        <main class="view-workspace">
+            <section class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-info"><h3>Tienda (6)</h3><div class="kpi-value" id="kpi-tienda">0</div></div>
+                    <div class="kpi-icon-wrapper"><i data-lucide="store" style="width:16px; height:16px;"></i></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-info"><h3>Tránsito (19)</h3><div class="kpi-value" id="kpi-transito">0</div></div>
+                    <div class="kpi-icon-wrapper"><i data-lucide="truck" style="width:16px; height:16px;"></i></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-info"><h3>CrossDock (2)</h3><div class="kpi-value" id="kpi-crossdock">0</div></div>
+                    <div class="kpi-icon-wrapper"><i data-lucide="package-check" style="width:16px; height:16px;"></i></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-info"><h3>Exposición (5)</h3><div class="kpi-value" id="kpi-exposicion">0</div></div>
+                    <div class="kpi-icon-wrapper"><i data-lucide="tv" style="width:16px; height:16px;"></i></div>
+                </div>
+            </section>
+
+            <section class="chart-card">
+                <div class="chart-card-title" id="chart-dynamic-title">
+                    <i data-lucide="align-left" style="width:14px; height:14px; color:var(--xiaomi-orange);"></i>
+                    <span>Distribución Porcentual (Haz clic en un segmento para filtrar)</span>
+                </div>
+                <div class="chart-wrapper"><canvas id="canvas-stacked-bar"></canvas></div>
+            </section>
+
+            <section class="store-blocks-grid">
+                
+                <div class="table-container">
+                    <div class="table-header header-tienda">
+                        <div class="table-title"><i data-lucide="store" style="width:14px; height:14px;"></i> Detalle Tienda (6)</div>
+                    </div>
+                    <div class="table-scroll-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="sortable" style="width:35%;" onclick="toggleSortBlock(6, 'StoreName')">Store Name <span class="sort-indicator" id="sort-icon-6-StoreName">▲</span></th>
+                                    <th id="th-col-tienda" style="width:50%;">Modelo</th>
+                                    <th class="sortable" style="width:15%; text-align:right;" onclick="toggleSortBlock(6, 'Cantidad')">Stock <span class="sort-indicator" id="sort-icon-6-Cantidad">-</span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-tienda"></tbody>
+                        </table>
+                    </div>
+                    <div class="table-footer-summary" id="footer-tienda"><div>0 tiendas</div><div>Total: 0 uds.</div></div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header header-transito">
+                        <div class="table-title"><i data-lucide="truck" style="width:14px; height:14px;"></i> Detalle Tránsito (19)</div>
+                    </div>
+                    <div class="table-scroll-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="sortable" style="width:35%;" onclick="toggleSortBlock(19, 'StoreName')">Store Name <span class="sort-indicator" id="sort-icon-19-StoreName">▲</span></th>
+                                    <th id="th-col-transito" style="width:50%;">Modelo</th>
+                                    <th class="sortable" style="width:15%; text-align:right;" onclick="toggleSortBlock(19, 'Cantidad')">Stock <span class="sort-indicator" id="sort-icon-19-Cantidad">-</span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-transito"></tbody>
+                        </table>
+                    </div>
+                    <div class="table-footer-summary" id="footer-transito"><div>0 tiendas</div><div>Total: 0 uds.</div></div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header header-crossdock">
+                        <div class="table-title"><i data-lucide="package-check" style="width:14px; height:14px;"></i> Detalle CrossDock (2)</div>
+                    </div>
+                    <div class="table-scroll-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="sortable" style="width:35%;" onclick="toggleSortBlock(2, 'StoreName')">Store Name <span class="sort-indicator" id="sort-icon-2-StoreName">▲</span></th>
+                                    <th id="th-col-crossdock" style="width:50%;">Modelo</th>
+                                    <th class="sortable" style="width:15%; text-align:right;" onclick="toggleSortBlock(2, 'Cantidad')">Stock <span class="sort-indicator" id="sort-icon-2-Cantidad">-</span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-crossdock"></tbody>
+                        </table>
+                    </div>
+                    <div class="table-footer-summary" id="footer-crossdock"><div>0 tiendas</div><div>Total: 0 uds.</div></div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header header-exposicion">
+                        <div class="table-title"><i data-lucide="tv" style="width:14px; height:14px;"></i> Detalle Exposición (5)</div>
+                    </div>
+                    <div class="table-scroll-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="sortable" style="width:35%;" onclick="toggleSortBlock(5, 'StoreName')">Store Name <span class="sort-indicator" id="sort-icon-5-StoreName">▲</span></th>
+                                    <th id="th-col-exposicion" style="width:50%;">Modelo</th>
+                                    <th class="sortable" style="width:15%; text-align:right;" onclick="toggleSortBlock(5, 'Cantidad')">Stock <span class="sort-indicator" id="sort-icon-5-Cantidad">-</span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-exposicion"></tbody>
+                        </table>
+                    </div>
+                    <div class="table-footer-summary" id="footer-exposicion"><div>0 tiendas</div><div>Total: 0 uds.</div></div>
+                </div>
+
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const definedMenuConfig = [
+            { id: "28", name: "Telefonia", icon: "smartphone" },
+            { id: "40", name: "Wearables", icon: "watch" },
+            { id: "7",  name: "Auriculares", icon: "headphones" },
+            { id: "47", name: "Scooters", icon: "zap" },
+            { id: "24", name: "Informatica", icon: "laptop" },
+            { id: "3",  name: "Tv", icon: "tv" },
+            { id: "34", name: "Pae", icon: "wind" },
+            { id: "33", name: "Vida saludable", icon: "scale" },
+            { id: "6",  name: "Audio", icon: "speaker" },
+            { id: "23", name: "Smarthome", icon: "home" },
+            { id: "18", name: "Barras de Sonido", icon: "music" },
+            { id: "29", name: "Accesorios Telefonia", icon: "plug-zap" },
+            { id: "26", name: "Accesorios Informatica", icon: "keyboard" }
+        ];
+
+        let stockData = [];
+        let currentUser = null;
+        let currentPermisos = null;
+        let currentTab = "general";
+        let currentViewMode = "producto"; 
+        let activeFilters = { Familia: [], SubFamilia: [], Modelo: [], Region: [], Zona: [], PR: [], StoreName: [], SegmentoGFK: [] };
+        let searchQuery = "";
+        let globalChart = null;
+        let expandedSubgroups = {};
+
+        // ─────────────────────────────────────────
+        // CONEXIÓN CON EL BACKEND REAL (Apps Script)
+        // ─────────────────────────────────────────
+        // URL de tu Web App de Apps Script (misma API que usa el resto del
+        // proyecto: acciones "login" y "getStock" por GET, con el payload
+        // codificado en la URL). Se llama por GET y no por POST a propósito:
+        // Apps Script redirige internamente cada petición y esa redirección
+        // no siempre trae las cabeceras CORS correctas para POST, lo que el
+        // navegador reporta como "Failed to fetch" aunque el backend esté
+        // bien. Con GET esa redirección sí es fiable.
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbxBiH3STmVZ0QGc8xg3BD7NSdsmw4spjBO-6uoXmG512z8KKqt_rBQ7T2uhaCG_8CN_/exec";
+
+        async function callBackend(action, payload) {
+            try {
+                const url = `${GAS_URL}?action=${encodeURIComponent(action)}&payload=${encodeURIComponent(JSON.stringify(payload))}`;
+                const res = await fetch(url, { method: 'GET' });
+                if (!res.ok) {
+                    return { success: false, error: `El servidor respondió ${res.status} ${res.statusText}` };
+                }
+                return await res.json();
+            } catch (err) {
+                return { success: false, error: `Error de conexión con el backend: ${err.message || err}` };
+            }
+        }
+
+        // CONFIGURACIÓN INDEPENDIENTE DE ORDENAMIENTO POR BLOQUE (Inicializado Ascendente por StoreName)
+        let blockSortConfig = {
+            6:  { field: 'StoreName', direction: 'asc' },
+            19: { field: 'StoreName', direction: 'asc' },
+            2:  { field: 'StoreName', direction: 'asc' },
+            5:  { field: 'StoreName', direction: 'asc' }
+        };
+
+        const sidebarMenu = document.getElementById('sidebar-menu');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const gfkToggleContainer = document.getElementById('gfk-view-toggle');
+
+        const filterMapping = {
+            Familia: { listId: 'dropdown-familia', txtId: 'txt-familia' },
+            SubFamilia: { listId: 'dropdown-subfamilia', txtId: 'txt-subfamilia' },
+            Modelo: { listId: 'dropdown-modelo', txtId: 'txt-modelo' },
+            Region: { listId: 'dropdown-region', txtId: 'txt-region' },
+            Zona: { listId: 'dropdown-zona', txtId: 'txt-zona' },
+            PR: { listId: 'dropdown-pr', txtId: 'txt-pr' },
+            StoreName: { listId: 'dropdown-store', txtId: 'txt-store' }
+        };
+
+        // ─────────────────────────────────────────
+        // ARRANQUE: sesión guardada o pantalla de login
+        // ─────────────────────────────────────────
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+
+            const savedSession = sessionStorage.getItem('sl_session');
+            if (savedSession) {
+                try {
+                    const session = JSON.parse(savedSession);
+                    currentUser = session.user;
+                    currentPermisos = session.permisos;
+                    startDashboardLoad();
+                    return;
+                } catch (e) {
+                    sessionStorage.removeItem('sl_session');
+                }
+            }
+            document.getElementById('login-screen').style.display = 'flex';
+        });
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('login-user').value.trim();
+            const password = document.getElementById('login-pass').value;
+            const btn = document.getElementById('btn-login');
+            const errBox = document.getElementById('login-error');
+            errBox.classList.remove('show');
+            btn.disabled = true;
+            btn.innerHTML = 'Comprobando...';
+
+            const resp = await callBackend('login', { username, password });
+
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="log-in" style="width:16px; height:16px;"></i> Entrar';
+            lucide.createIcons();
+
+            if (!resp.success) {
+                errBox.textContent = resp.error || 'No se pudo iniciar sesión.';
+                errBox.classList.add('show');
+                return;
+            }
+            currentUser = resp.user;
+            currentPermisos = resp.permisos;
+            sessionStorage.setItem('sl_session', JSON.stringify({ user: currentUser, permisos: currentPermisos }));
+            document.getElementById('login-screen').style.display = 'none';
+            startDashboardLoad();
+        });
+
+        document.getElementById('btn-logout').addEventListener('click', () => {
+            sessionStorage.removeItem('sl_session');
+            window.location.reload();
+        });
+
+        function startDashboardLoad() {
+            document.getElementById('loading-screen').style.display = 'flex';
+            document.getElementById('lbl-usuario-nombre').textContent = currentUser.nombre || currentUser.usuario;
+            callBackend('getStock', { user: currentUser }).then(onDataLoadResult);
+        }
+
+        function onDataLoadResult(resp) {
+            if (!resp.success) {
+                onDataLoadFailure({ message: resp.error || 'No se pudo cargar el stock.' });
+                return;
+            }
+            onDataLoadSuccess(resp);
+        }
+
+        function onDataLoadSuccess(responseFromServer) {
+            document.getElementById('lbl-fecha-cierre').textContent = responseFromServer.fechaCierre || "N/D";
+            stockData = responseFromServer.datos || [];
+            if (responseFromServer.permisos) currentPermisos = responseFromServer.permisos;
+
+            document.getElementById('loading-screen').style.display = 'none';
+            applyPermisosToFilters();
+            buildIconsOnlyMenu();
+            populateDropdownFilters();
+            renderDashboard();
+            setupEventListeners();
+        }
+
+        function onDataLoadFailure(error) {
+            document.getElementById('loading-screen').style.display = 'flex';
+            document.getElementById('loading-text').innerHTML = `<span style="color:#e63946;">Error al cargar datos: ${error.message}</span>`;
+        }
+
+        // Oculta en el sidebar los filtros que el rol del usuario no tiene permitidos
+        function applyPermisosToFilters() {
+            if (!currentPermisos || !currentPermisos.allowedFilters) return;
+            const allowed = currentPermisos.allowedFilters;
+            document.querySelectorAll('.filter-group[data-filter-key]').forEach(group => {
+                const key = group.getAttribute('data-filter-key');
+                group.classList.toggle('perm-hidden', !allowed.includes(key));
+            });
+        }
+
+        function cleanFamilyId(rawName) {
+            if (!rawName) return "";
+            return rawName.split('-')[0].trim();
+        }
+
+        function toggleDropdown(id) {
+            document.querySelectorAll('.dropdown-list').forEach(list => {
+                if(list.id !== id) list.classList.remove('show');
+            });
+            document.getElementById(id).classList.toggle('show');
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.filter-group')) {
+                document.querySelectorAll('.dropdown-list').forEach(list => list.classList.remove('show'));
+            }
+        });
+
+        function buildIconsOnlyMenu() {
+            const pcContainer = document.getElementById('dynamic-tabs-pc');
+            const mobileSelect = document.getElementById('dynamic-tabs-mobile');
+            const realIdsInSheet = [...new Set(stockData.map(item => cleanFamilyId(item.Familia)))].filter(Boolean);
+
+            definedMenuConfig.forEach(cfg => {
+                if(realIdsInSheet.includes(cfg.id)) {
+                    createMenuElements(pcContainer, mobileSelect, cfg.id, cfg.name, cfg.icon);
+                }
+            });
+
+            const configuredIds = definedMenuConfig.map(c => c.id);
+            const restoIds = realIdsInSheet.filter(id => !configuredIds.includes(id)).sort((a,b) => parseFloat(a) - parseFloat(b));
+
+            restoIds.forEach(id => {
+                createMenuElements(pcContainer, mobileSelect, id, `Familia ${id}`, "package");
+            });
+            lucide.createIcons();
+        }
+
+        function createMenuElements(pcContainer, mobileSelect, id, fullName, iconName) {
+            const tab = document.createElement('div');
+            tab.className = 'nav-tab';
+            tab.setAttribute('data-tab', id);
+            tab.setAttribute('title', `${id} - ${fullName}`);
+            tab.innerHTML = `<i data-lucide="${iconName}"></i>`;
+            pcContainer.appendChild(tab);
+
+            const opt = document.createElement('option');
+            opt.value = id;
+            opt.textContent = `${id} - ${fullName}`;
+            mobileSelect.appendChild(opt);
+        }
+
+        function populateDropdownFilters() {
+            for (const [key, config] of Object.entries(filterMapping)) {
+                const listContainer = document.getElementById(config.listId);
+                const txtLabel = document.getElementById(config.txtId);
+                const currentSelections = activeFilters[key];
+
+                const dynamicContext = stockData.filter(item => {
+                    const famId = cleanFamilyId(item.Familia);
+                    if (currentTab !== "general" && famId !== currentTab) return false;
+
+                    if (key === 'Zona') {
+                        if (activeFilters.Region.length && !activeFilters.Region.includes(item.Region)) return false;
+                    }
+                    if (key === 'PR') {
+                        if (activeFilters.Region.length && !activeFilters.Region.includes(item.Region)) return false;
+                        if (activeFilters.Zona.length && !activeFilters.Zona.includes(item.Zona)) return false;
+                    }
+                    if (key === 'StoreName') {
+                        if (activeFilters.Region.length && !activeFilters.Region.includes(item.Region)) return false;
+                        if (activeFilters.Zona.length && !activeFilters.Zona.includes(item.Zona)) return false;
+                        if (activeFilters.PR.length && !activeFilters.PR.includes(item.PR)) return false;
+                    }
+                    return true;
+                });
+
+                const uniqueValues = [...new Set(dynamicContext.map(item => item[key]))].filter(Boolean).sort();
+                listContainer.innerHTML = "";
+                
+                uniqueValues.forEach(val => {
+                    const itemEl = document.createElement('div');
+                    itemEl.className = 'dropdown-item';
+                    
+                    const isChecked = currentSelections.includes(val);
+                    itemEl.innerHTML = `
+                        <input type="checkbox" value="${val}" ${isChecked ? 'checked' : ''}>
+                        <span>${val}</span>
+                    `;
+                    
+                    itemEl.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const chk = itemEl.querySelector('input');
+                        if(e.target !== chk) chk.checked = !chk.checked;
+                        updateSelectionsFromDropdown(key);
+                        
+                        if (key === 'Region') { activeFilters.Zona = []; activeFilters.PR = []; activeFilters.StoreName = []; }
+                        if (key === 'Zona') { activeFilters.PR = []; activeFilters.StoreName = []; }
+                        if (key === 'PR') { activeFilters.StoreName = []; }
+                        
+                        populateDropdownFilters();
+                    });
+
+                    listContainer.appendChild(itemEl);
+                });
+
+                if(currentSelections.length === 0) {
+                    txtLabel.textContent = "Todos";
+                } else if(currentSelections.length === 1) {
+                    txtLabel.textContent = currentSelections[0];
+                } else {
+                    txtLabel.textContent = `${currentSelections.length} Seleccionados`;
+                }
+            }
+        }
+
+        function updateSelectionsFromDropdown(key) {
+            const config = filterMapping[key];
+            const listContainer = document.getElementById(config.listId);
+            const checkedBoxes = Array.from(listContainer.querySelectorAll('input:checked')).map(chk => chk.value);
+            
+            activeFilters[key] = checkedBoxes;
+            renderDashboard();
+        }
+
+        // CONTROLAR Y CONMUTAR DIRECCIÓN DE ORDENAMIENTO POR BLOQUE
+        function toggleSortBlock(locId, field) {
+            const current = blockSortConfig[locId];
+            if (current.field === field) {
+                current.direction = (current.direction === 'asc') ? 'desc' : 'asc';
+            } else {
+                current.field = field;
+                current.direction = 'asc'; 
+            }
+            updateSortIndicatorsVisuals();
+            const data = getProcessedData();
+            renderAllFourBlocks(data);
+        }
+
+        // ACTUALIZAR ICONOS DE LAS CABECERAS (▲ / ▼ / -)
+        function updateSortIndicatorsVisuals() {
+            [6, 19, 2, 5].forEach(locId => {
+                const cfg = blockSortConfig[locId];
+                ['StoreName', 'Cantidad'].forEach(f => {
+                    const span = document.getElementById(`sort-icon-${locId}-${f}`);
+                    if (!span) return;
+                    if (cfg.field === f) {
+                        span.textContent = cfg.direction === 'asc' ? '▲' : '▼';
+                        span.style.opacity = '1';
+                        span.style.color = 'var(--xiaomi-orange)';
+                    } else {
+                        span.textContent = '-';
+                        span.style.opacity = '0.4';
+                        span.style.color = 'inherit';
+                    }
+                });
+            });
+        }
+
+        function setViewMode(mode) {
+            currentViewMode = mode;
+            document.getElementById('btn-view-prod').classList.toggle('active', mode === 'producto');
+            document.getElementById('btn-view-gfk').classList.toggle('active', mode === 'gfk');
+            
+            const labelText = mode === 'gfk' ? "Clasificación GFK" : "Modelo";
+            document.getElementById('th-col-tienda').textContent = labelText;
+            document.getElementById('th-col-transito').textContent = labelText;
+            document.getElementById('th-col-crossdock').textContent = labelText;
+            document.getElementById('th-col-exposicion').textContent = labelText;
+            
+            renderDashboard();
+        }
+
+        function handleTabChange(tabId) {
+            currentTab = tabId;
+            Object.keys(activeFilters).forEach(k => activeFilters[k] = []);
+            document.getElementById('global-search').value = "";
+            searchQuery = "";
+            expandedSubgroups = {};
+
+            [6, 19, 2, 5].forEach(locId => {
+                blockSortConfig[locId] = { field: 'StoreName', direction: 'asc' };
+            });
+
+            if (currentTab === "28") {
+                gfkToggleContainer.style.display = "flex";
+            } else {
+                gfkToggleContainer.style.display = "none";
+                setViewMode('producto'); 
+            }
+            updateSortIndicatorsVisuals();
+            syncAndRefresh();
+        }
+
+        function setupEventListeners() {
+            document.getElementById('btn-toggle-menu').addEventListener('click', () => {
+                sidebarMenu.classList.contains('collapsed') ? openSidebar() : closeSidebar();
+            });
+            document.getElementById('btn-close-filters').addEventListener('click', closeSidebar);
+            sidebarOverlay.addEventListener('click', closeSidebar);
+
+            document.getElementById('dynamic-tabs-pc').addEventListener('click', (e) => {
+                const tabEl = e.target.closest('.nav-tab');
+                if (!tabEl) return;
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                tabEl.classList.add('active');
+                
+                document.getElementById('dynamic-tabs-mobile').value = tabEl.getAttribute('data-tab');
+                handleTabChange(tabEl.getAttribute('data-tab'));
+            });
+
+            document.getElementById('dynamic-tabs-mobile').addEventListener('change', (e) => {
+                document.querySelectorAll('.nav-tab').forEach(t => {
+                    t.classList.remove('active');
+                    if(t.getAttribute('data-tab') === e.target.value) t.classList.add('active');
+                });
+                handleTabChange(e.target.value);
+            });
+
+            document.getElementById('global-search').addEventListener('input', (e) => {
+                searchQuery = e.target.value.toLowerCase();
+                renderDashboard(); 
+            });
+
+            document.getElementById('btn-reset-filters').addEventListener('click', () => {
+                Object.keys(activeFilters).forEach(k => activeFilters[k] = []);
+                document.getElementById('global-search').value = "";
+                searchQuery = "";
+                expandedSubgroups = {}; 
+                [6, 19, 2, 5].forEach(locId => {
+                    blockSortConfig[locId] = { field: 'StoreName', direction: 'asc' };
+                });
+                updateSortIndicatorsVisuals();
+                populateDropdownFilters();
+                renderDashboard();
+            });
+        }
+
+        function syncAndRefresh() {
+            populateDropdownFilters();
+            renderDashboard();
+        }
+
+        function openSidebar() { sidebarMenu.classList.remove('collapsed'); sidebarOverlay.classList.add('active'); }
+        function closeSidebar() { sidebarMenu.classList.add('collapsed'); sidebarOverlay.classList.remove('active'); }
+
+        function getProcessedData() {
+            return stockData.filter(item => {
+                const famId = cleanFamilyId(item.Familia);
+                if (currentTab !== 'general' && famId !== currentTab) return false;
+                
+                if (activeFilters.Familia.length && !activeFilters.Familia.includes(item.Familia)) return false;
+                if (activeFilters.SubFamilia.length && !activeFilters.SubFamilia.includes(item.SubFamilia)) return false;
+                if (activeFilters.Modelo.length && !activeFilters.Modelo.includes(item.Modelo)) return false;
+                if (activeFilters.Region.length && !activeFilters.Region.includes(item.Region)) return false;
+                if (activeFilters.Zona.length && !activeFilters.Zona.includes(item.Zona)) return false;
+                if (activeFilters.PR.length && !activeFilters.PR.includes(item.PR)) return false;
+                if (activeFilters.StoreName.length && !activeFilters.StoreName.includes(item.StoreName)) return false;
+                if (activeFilters.SegmentoGFK && activeFilters.SegmentoGFK.length && !activeFilters.SegmentoGFK.includes(item.SegmentoGFK || 'Otros')) return false;
+                
+                if (searchQuery && !item.Modelo.toLowerCase().includes(searchQuery)) return false;
+                
+                return true;
+            });
+        }
+
+        function renderDashboard() {
+            const data = getProcessedData();
+            renderSummaryBadges();
+            renderKPIs(data); 
+            renderStackedDistributionChart(data);
+            updateSortIndicatorsVisuals();
+            renderAllFourBlocks(data);
+        }
+
+        function renderSummaryBadges() {
+            const container = document.getElementById('active-filters-summary');
+            container.innerHTML = "";
+            let items = [];
+            if(currentTab !== 'general') items.push(`Tab: <strong>${currentTab}</strong>`);
+            if(activeFilters.Familia.length) items.push(`Fam: <strong>(${activeFilters.Familia.length})</strong>`);
+            if(activeFilters.SubFamilia.length) items.push(`Subf: <strong>(${activeFilters.SubFamilia.length})</strong>`);
+            if(activeFilters.Modelo.length) items.push(`Mod: <strong>(${activeFilters.Modelo.length})</strong>`);
+            if(activeFilters.Region.length) items.push(`Reg: <strong>(${activeFilters.Region.length})</strong>`);
+            if(activeFilters.Zona.length) items.push(`Zon: <strong>(${activeFilters.Zona.length})</strong>`);
+            if(activeFilters.StoreName.length) items.push(`St: <strong>(${activeFilters.StoreName.length})</strong>`);
+            if(activeFilters.SegmentoGFK && activeFilters.SegmentoGFK.length) items.push(`GFK: <strong>(${activeFilters.SegmentoGFK.length})</strong>`);
+
+            if(items.length > 0) {
+                items.forEach(txt => {
+                    const b = document.createElement('div'); b.className = 'filter-badge';
+                    b.innerHTML = txt; container.appendChild(b);
+                });
+            }
+        }
+
+        function renderKPIs(data) {
+            const counts = { 6: 0, 19: 0, 2: 0, 5: 0 };
+            data.forEach(item => { if (counts[item.Localizacion] !== undefined) counts[item.Localizacion] += item.Cantidad; });
+            document.getElementById('kpi-tienda').textContent = counts[6].toLocaleString();
+            document.getElementById('kpi-transito').textContent = counts[19].toLocaleString();
+            document.getElementById('kpi-crossdock').textContent = counts[2].toLocaleString();
+            document.getElementById('kpi-exposicion').textContent = counts[5].toLocaleString();
+        }
+
+        function renderStackedDistributionChart(data) {
+            if(globalChart) globalChart.destroy();
+            const titleSpan = document.getElementById('chart-dynamic-title').querySelector('span');
+            
+            const dataForChart = stockData.filter(item => {
+                const famId = cleanFamilyId(item.Familia);
+                if (currentTab !== 'general' && famId !== currentTab) return false;
+                if (activeFilters.Familia.length && !activeFilters.Familia.includes(item.Familia)) return false;
+                if (activeFilters.SubFamilia.length && !activeFilters.SubFamilia.includes(item.SubFamilia)) return false;
+                if (activeFilters.Modelo.length && !activeFilters.Modelo.includes(item.Modelo)) return false;
+                if (activeFilters.Region.length && !activeFilters.Region.includes(item.Region)) return false;
+                if (activeFilters.Zona.length && !activeFilters.Zona.includes(item.Zona)) return false;
+                if (activeFilters.PR.length && !activeFilters.PR.includes(item.PR)) return false;
+                if (activeFilters.StoreName.length && !activeFilters.StoreName.includes(item.StoreName)) return false;
+                if (searchQuery && !item.Modelo.toLowerCase().includes(searchQuery)) return false;
+                return true;
+            });
+
+            const total = dataForChart.reduce((a, c) => a + c.Cantidad, 0);
+
+            if(total === 0) {
+                titleSpan.textContent = "Distribución % (Sin registros cargados)";
+                return;
+            }
+
+            let sortedLabels = [];
+            const groups = {};
+
+            if (currentTab === "28") {
+                titleSpan.textContent = "Segmentación GFK (Haz clic para filtrar un segmento)";
+                dataForChart.forEach(item => {
+                    const key = item.SegmentoGFK || 'Otros';
+                    groups[key] = (groups[key] || 0) + item.Cantidad;
+                });
+                const targetOrder = ["Premium", "C", "B", "A"];
+                sortedLabels = targetOrder.filter(lbl => groups[lbl] !== undefined);
+                Object.keys(groups).forEach(lbl => { if(!targetOrder.includes(lbl)) sortedLabels.push(lbl); });
+            } else if (currentTab === "general") {
+                titleSpan.textContent = "Distribución Global por Familias (Haz clic para filtrar)";
+                dataForChart.forEach(item => {
+                    const key = item.Familia || 'Otras';
+                    groups[key] = (groups[key] || 0) + item.Cantidad;
+                });
+                sortedLabels = Object.keys(groups).sort();
+            } else {
+                titleSpan.textContent = `Distribución por Subfamilias (Haz clic para filtrar)`;
+                dataForChart.forEach(item => {
+                    const key = item.SubFamilia || 'Otras';
+                    groups[key] = (groups[key] || 0) + item.Cantidad;
+                });
+                sortedLabels = Object.keys(groups).sort();
+            }
+
+            const palette = ['#FF6700', '#2b8a3e', '#1c7ed6', '#7048e8', '#e03131', '#f59f00', '#099268', '#ae3ec9', '#343a40'];
+            const datasets = [];
+
+            sortedLabels.forEach((lbl, index) => {
+                const value = groups[lbl];
+                const pct = parseFloat(((value / total) * 100).toFixed(1));
+                datasets.push({
+                    label: lbl,
+                    data: [pct],
+                    backgroundColor: palette[index % palette.length],
+                    borderWidth: 0
+                });
+            });
+
+            const ctx = document.getElementById('canvas-stacked-bar').getContext('2d');
+            globalChart = new Chart(ctx, {
+                type: 'bar',
+                plugins: [ChartDataLabels],
+                data: { labels: ['Proporción %'], datasets: datasets },
+                options: {
+                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    scales: { x: { stacked: true, max: 100, display: false }, y: { stacked: true, display: false } },
+                    onHover: (event, chartElements) => {
+                        event.native.target.style.cursor = chartElements.length ? 'pointer' : 'default';
+                    },
+                    onClick: (event, chartElements) => {
+                        if (!chartElements.length) return;
+                        const elementIndex = chartElements[0].datasetIndex;
+                        const labelSelected = datasets[elementIndex].label;
+
+                        if (currentTab === "28") {
+                            if (activeFilters.SegmentoGFK.includes(labelSelected)) {
+                                activeFilters.SegmentoGFK = [];
+                            } else {
+                                activeFilters.SegmentoGFK = [labelSelected];
+                            }
+                        } else if (currentTab === "general") {
+                            if (activeFilters.Familia.includes(labelSelected)) {
+                                activeFilters.Familia = [];
+                            } else {
+                                activeFilters.Familia = [labelSelected];
+                            }
+                        } else {
+                            if (activeFilters.SubFamilia.includes(labelSelected)) {
+                                activeFilters.SubFamilia = [];
+                            } else {
+                                activeFilters.SubFamilia = [labelSelected];
+                            }
+                        }
+                        renderDashboard();
+                    },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 }, padding: 4, color: '#495057' } },
+                        tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${ctx.raw}%` } },
+                        datalabels: {
+                            color: '#fff',
+                            font: { weight: 'bold', size: 10 },
+                            formatter: (value) => value > 5 ? `${value}%` : '',
+                            align: 'center',
+                            anchor: 'center'
+                        }
+                    }
+                }
+            });
+        }
+
+        function toggleGfkAccordion(locId, segmentName) {
+            const accordionKey = `${locId}_${segmentName}`;
+            expandedSubgroups[accordionKey] = !expandedSubgroups[accordionKey];
+            
+            const headerRow = document.getElementById(`header-${accordionKey}`);
+            const detailRows = document.querySelectorAll(`.detail-${accordionKey}`);
+            
+            if (expandedSubgroups[accordionKey]) {
+                headerRow.classList.add('is-expanded');
+                detailRows.forEach(r => r.classList.remove('is-hidden'));
+            } else {
+                headerRow.classList.remove('is-expanded');
+                detailRows.forEach(r => r.classList.add('is-hidden'));
+            }
+        }
+
+        function sortBlockRows(rows, config) {
+            return rows.sort((a, b) => {
+                let valA = a[config.field];
+                let valB = b[config.field];
+
+                if (typeof valA === 'string') {
+                    return config.direction === 'asc' 
+                        ? valA.localeCompare(valB, 'es', { sensitivity: 'base' })
+                        : valB.localeCompare(valA, 'es', { sensitivity: 'base' });
+                }
+                return config.direction === 'asc' ? valA - valB : valB - valA;
+            });
+        }
+
+        function renderAllFourBlocks(finalRows) {
+            const targets = {
+                6:  { tbody: document.getElementById('tbody-tienda'),     footer: document.getElementById('footer-tienda'),     sumUnits: 0, stores: new Set() },
+                19: { tbody: document.getElementById('tbody-transito'),   footer: document.getElementById('footer-transito'),   sumUnits: 0, stores: new Set() },
+                2:  { tbody: document.getElementById('tbody-crossdock'),  footer: document.getElementById('footer-crossdock'),  sumUnits: 0, stores: new Set() },
+                5:  { tbody: document.getElementById('tbody-exposicion'), footer: document.getElementById('footer-exposicion'), sumUnits: 0, stores: new Set() }
+            };
+
+            Object.values(targets).forEach(tgt => tgt.tbody.innerHTML = "");
+
+            Object.entries(targets).forEach(([locId, block]) => {
+                let blockRows = finalRows.filter(item => item.Localizacion.toString() === locId);
+                block.sumUnits = blockRows.reduce((a, c) => a + c.Cantidad, 0);
+                block.stores = new Set(blockRows.map(r => r.StoreName));
+
+                if (blockRows.length === 0) {
+                    block.tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding:20px;">Sin registros activos</td></tr>`;
+                    return;
+                }
+
+                blockRows = sortBlockRows(blockRows, blockSortConfig[locId]);
+
+                if (currentTab === "28" && currentViewMode === "gfk") {
+                    const gfkOrder = ["Premium", "C", "B", "A", "Sin Clasificar"];
+
+                    gfkOrder.forEach(segmentName => {
+                        const segmentRows = blockRows.filter(r => {
+                            const currentSeg = (r.SegmentoGFK || "").trim();
+                            if (segmentName === "Sin Clasificar") {
+                                return !currentSeg || currentSeg === "N/A" || currentSeg === "N/D";
+                            }
+                            return currentSeg.toLowerCase() === segmentName.toLowerCase();
+                        });
+
+                        if (segmentRows.length === 0) return;
+
+                        const segmentUnits = segmentRows.reduce((a, c) => a + c.Cantidad, 0);
+                        const accordionKey = `${locId}_${segmentName}`;
+                        
+                        if (expandedSubgroups[accordionKey] === undefined) {
+                            expandedSubgroups[accordionKey] = false;
+                        }
+                        
+                        const isExpanded = expandedSubgroups[accordionKey];
+
+                        const trSubHeader = document.createElement('tr');
+                        trSubHeader.className = `row-subgroup-gfk ${isExpanded ? 'is-expanded' : ''}`;
+                        trSubHeader.id = `header-${accordionKey}`;
+                        trSubHeader.setAttribute('onclick', `toggleGfkAccordion('${locId}', '${segmentName}')`);
+                        
+                        let emoji = "💎";
+                        if(segmentName === "A") emoji = "🥇";
+                        if(segmentName === "B") emoji = "🥈";
+                        if(segmentName === "C") emoji = "🥉";
+                        if(segmentName === "Sin Clasificar") emoji = "📂";
+
+                        trSubHeader.innerHTML = `
+                            <td colspan="2">
+                                <div class="subgroup-title-wrapper">
+                                    <div class="badge-title-side">
+                                        <span class="badge-gfk-inline">${emoji} Segmento ${segmentName}</span>
+                                    </div>
+                                    <span class="toggle-icon-gfk">▶</span>
+                                </div>
+                            </td>
+                            <td style="text-align:right; font-weight:700; color:var(--xiaomi-orange); font-size: 0.82rem;">${segmentUnits.toLocaleString()}</td>
+                        `;
+                        block.tbody.appendChild(trSubHeader);
+
+                        segmentRows.forEach(item => {
+                            const tr = document.createElement('tr');
+                            tr.className = `row-detail-gfk detail-${accordionKey} ${isExpanded ? '' : 'is-hidden'}`;
+                            tr.innerHTML = `
+                                <td title="${item.StoreName}" style="padding-left: 20px;"><strong>${item.StoreName}</strong></td>
+                                <td title="${item.Modelo}" style="color: var(--text-muted); font-size:0.75rem;">${item.Modelo}</td>
+                                <td style="text-align:right; font-weight:700;">${item.Cantidad}</td>
+                            `;
+                            block.tbody.appendChild(tr);
+                        });
+                    });
+
+                } else {
+                    blockRows.forEach(item => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td title="${item.StoreName}"><strong>${item.StoreName}</strong></td>
+                            <td title="${item.Modelo}">${item.Modelo}</td>
+                            <td style="text-align:right; font-weight:700;">${item.Cantidad}</td>
+                        `;
+                        block.tbody.appendChild(tr);
+                    });
+                }
+            });
+
+            Object.entries(targets).forEach(([id, block]) => {
+                block.footer.innerHTML = `
+                    <div>${block.stores.size} PdV</div>
+                    <div style="color:var(--text-main)">Total: ${block.sumUnits.toLocaleString()} uds.</div>
+                `;
+            });
+        }
+    </script>
+
+    <script>
+        // Registro del service worker para que la app sea instalable (PWA).
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch((err) => {
+                    console.warn('No se pudo registrar el service worker:', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
+

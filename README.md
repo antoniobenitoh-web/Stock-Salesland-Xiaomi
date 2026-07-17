@@ -33,7 +33,51 @@ una URL de script.google.com**.
 
 He verificado que `npm run build` termina sin errores con estos cambios.
 
-## ✅ Ya conectado a Google Sheets real (login + stock reales)
+## 🔄 Cambio de arquitectura: ahora se despliega tu diseño original
+
+A partir de aquí, **lo que se publica en GitHub Pages ya no es la app de
+React** (`src/App.tsx`) — es tu dashboard original en HTML/CSS/JS puro
+(el que me pasaste), ahora en la carpeta **`sitio-estatico/`**, con:
+
+- El mismo diseño, filtros, menús, pestañas y tablas exactamente como
+  los tenías.
+- Login añadido (antes no tenía), conectado a tu backend real de Apps
+  Script (`action=login`).
+- Carga de stock real conectada a tu backend (`action=getStock`), con
+  el mismo filtrado por rol (Manager/GPV/Promotor) de siempre.
+- Sesión guardada en `sessionStorage` + botón "Cerrar sesión".
+- Ocultación automática de los filtros que el rol no tiene permitido.
+- PWA instalable: `manifest.json` + `sw.js` (service worker) + iconos,
+  todo dentro de `sitio-estatico/`.
+
+**Como es HTML/CSS/JS puro, no hay build.** El workflow de GitHub
+Actions (`.github/workflows/deploy.yml`) ya no ejecuta `npm run build`
+— simplemente publica el contenido de `sitio-estatico/` tal cual. Esto
+hace el despliegue más simple y rápido que con React/Vite.
+
+El proyecto de React (`src/`, `package.json`, etc.) se queda en el repo
+sin usarse, por si en algún momento quieres retomarlo o comparar — no
+se ha borrado nada, pero **ya no es lo que se publica**.
+
+### Un solo cambio manual que tienes que hacer
+
+Dentro de `sitio-estatico/index.html`, busca esta línea (cerca del
+principio del `<script>` principal):
+
+```js
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxBiH3STmVZ0QGc8xg3BD7NSdsmw4spjBO-6uoXmG512z8KKqt_rBQ7T2uhaCG_8CN_/exec";
+```
+
+Está puesta con la URL que me diste antes. Si tu URL de despliegue de
+Apps Script cambia en el futuro (por ejemplo, si algún día creas una
+implementación nueva en vez de una "nueva versión" de la existente),
+solo tienes que actualizar esa línea.
+
+### Publicarlo
+
+Es exactamente el mismo proceso de antes (`git add . && git commit &&
+git push`, Pages con origen "GitHub Actions"), solo que ahora el build
+es casi instantáneo porque no hay que compilar nada.
 
 `App.tsx` ya no usa el login ni el stock de ejemplo por defecto: al
 enviar el formulario de login llama de verdad a tu hoja de `usuarios`, y
