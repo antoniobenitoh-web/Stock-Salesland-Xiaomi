@@ -65,7 +65,7 @@ Dentro de `sitio-estatico/index.html`, busca esta línea (cerca del
 principio del `<script>` principal):
 
 ```js
-const GAS_URL = "https://script.google.com/macros/s/AKfycbxBiH3STmVZ0QGc8xg3BD7NSdsmw4spjBO-6uoXmG512z8KKqt_rBQ7T2uhaCG_8CN_/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxhFVYBZeXiW2AMWLaGh3oGm0Zvbmbw5oDtTshEaYy9oF-6D4cZTmkiioIBrreIjRe_/exec";
 ```
 
 Está puesta con la URL que me diste antes. Si tu URL de despliegue de
