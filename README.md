@@ -172,10 +172,22 @@ Google Sheets: Google Sheets · cierre dd/mm/yyyy"*.
   *fallback* solo mientras no has iniciado sesión (pantalla de login) o
   si pulsas "Restablecer a plantilla" — no se borran, por si quieres
   usarlos para hacer una demo sin tocar datos reales.
-- El segundo sistema de login que existía sin usar (`src/Login/Login.jsx`
-  + `context/AuthContext.jsx`) sigue ahí sin usarse — es código muerto
-  heredado, no le des importancia; toda la lógica real vive ahora en
-  `App.tsx` + `src/services/backend.ts`.
+- **Service worker y versiones "pegadas":** el `sw.js` cachea el sitio
+  para que sea instalable y rápido. El HTML/JS del propio sitio usa
+  ahora estrategia "red primero" (siempre intenta la versión más
+  reciente del servidor, y solo cae a la copia en caché si no hay
+  conexión), así que las actualizaciones se ven de inmediato. Aun así,
+  **cada vez que hagas un cambio importante en `sitio-estatico/`, sube
+  en uno el número `CACHE_VERSION` al principio de `sitio-estatico/sw.js`**
+  (`v2` → `v3`, etc.) — eso fuerza a los navegadores que ya tenían la
+  app instalada a refrescar del todo. Si alguna vez un cambio no se ve
+  reflejado en el navegador, la solución rápida es, en la Consola del
+  navegador:
+  ```js
+  navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
+  caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+  ```
+  y recargar con Cmd+Shift+R (Mac) / Ctrl+Shift+R (Windows).
 
 ## 🚀 Cómo publicarlo (GitHub Pages, gratis, con URL propia)
 
