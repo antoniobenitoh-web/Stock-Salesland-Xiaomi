@@ -581,17 +581,46 @@
         // bien. Con GET esa redirección sí es fiable.
         const GAS_URL = "https://script.google.com/macros/s/AKfycbxBiH3STmVZ0QGc8xg3BD7NSdsmw4spjBO-6uoXmG512z8KKqt_rBQ7T2uhaCG_8CN_/exec";
 
-        async function callBackend(action, payload) {
-            try {
-                const url = `${GAS_URL}?action=${encodeURIComponent(action)}&payload=${encodeURIComponent(JSON.stringify(payload))}`;
-                const res = await fetch(url, { method: 'GET' });
-                if (!res.ok) {
-                    return { success: false, error: `El servidor respondió ${res.status} ${res.statusText}` };
+        // Llamada al backend por JSONP (NO por fetch). Apps Script Web
+        // Apps no añade las cabeceras CORS que fetch() necesita para
+        // LEER la respuesta desde un dominio externo (GitHub Pages) —
+        // es una limitación conocida de Apps Script, no algo que se
+        // pueda arreglar con más configuración. Las etiquetas <script>
+        // no están sujetas a CORS, así que cargamos la respuesta como
+        // un <script> que ejecuta una función de callback que nosotros
+        // definimos, y esa función resuelve la promesa con los datos.
+        let jsonpCounter = 0;
+        function callBackend(action, payload) {
+            return new Promise((resolve) => {
+                const callbackName = `slCallback_${Date.now()}_${jsonpCounter++}`;
+                const script = document.createElement('script');
+                let timeoutId;
+
+                function cleanup() {
+                    delete window[callbackName];
+                    if (script.parentNode) script.parentNode.removeChild(script);
+                    clearTimeout(timeoutId);
                 }
-                return await res.json();
-            } catch (err) {
-                return { success: false, error: `Error de conexión con el backend: ${err.message || err}` };
-            }
+
+                window[callbackName] = (data) => {
+                    cleanup();
+                    resolve(data);
+                };
+
+                script.onerror = () => {
+                    cleanup();
+                    resolve({ success: false, error: 'No se pudo conectar con el backend (revisa la URL de Apps Script o tu conexión).' });
+                };
+
+                timeoutId = setTimeout(() => {
+                    cleanup();
+                    resolve({ success: false, error: 'Tiempo de espera agotado conectando con el backend.' });
+                }, 15000);
+
+                const url = `${GAS_URL}?action=${encodeURIComponent(action)}&payload=${encodeURIComponent(JSON.stringify(payload))}&callback=${callbackName}`;
+                script.src = url;
+                document.body.appendChild(script);
+            });
         }
 
         // CONFIGURACIÓN INDEPENDIENTE DE ORDENAMIENTO POR BLOQUE (Inicializado Ascendente por StoreName)

@@ -43,32 +43,48 @@ interface StockResponse {
   error?: string;
 }
 
-// Llamada genérica al backend, por GET con los datos codificados en la
-// propia URL. IMPORTANTE: no cambies esto a POST sin más — Apps Script
-// redirige internamente cada petición (script.google.com ->
-// script.googleusercontent.com) y esa redirección no siempre trae las
-// cabeceras CORS correctas para POST, lo que provoca un "Failed to
-// fetch" en el navegador aunque el backend funcione bien. Con GET la
-// redirección sí es fiable. El "payload" (usuario/contraseña o el
-// objeto de sesión) va codificado como JSON en un parámetro de la URL;
-// como todo viaja por HTTPS, sigue yendo cifrado en tránsito, aunque
-// quede visible en el historial del navegador y en el registro de
-// ejecuciones de Apps Script — ten esto en cuenta si más adelante
-// quieres reforzarlo (por ejemplo, limitando qué ve ese registro).
-async function callBackend<T>(action: string, payload: Record<string, unknown>): Promise<T> {
+// Llamada al backend por JSONP (NO por fetch). Apps Script Web Apps no
+// añade las cabeceras CORS que fetch() necesita para LEER la respuesta
+// desde un dominio externo (GitHub Pages) — es una limitación conocida
+// de Apps Script, no un problema de configuración. Las etiquetas
+// <script> no están sujetas a CORS, así que cargamos la respuesta como
+// un <script> que ejecuta una función de callback definida por
+// nosotros, y esa función resuelve la promesa con los datos.
+let jsonpCounter = 0;
+function callBackend<T>(action: string, payload: Record<string, unknown>): Promise<T> {
   if (!GAS_URL) {
-    return { success: false, error: 'VITE_GAS_URL no está configurada (revisa el archivo .env).' } as unknown as T;
+    return Promise.resolve({ success: false, error: 'VITE_GAS_URL no está configurada (revisa el archivo .env).' } as unknown as T);
   }
-  try {
-    const url = `${GAS_URL}?action=${encodeURIComponent(action)}&payload=${encodeURIComponent(JSON.stringify(payload))}`;
-    const res = await fetch(url, { method: 'GET' });
-    if (!res.ok) {
-      return { success: false, error: `El servidor respondió ${res.status} ${res.statusText}` } as unknown as T;
-    }
-    return (await res.json()) as T;
-  } catch (err: any) {
-    return { success: false, error: `Error de conexión con el backend: ${err.message || err}` } as unknown as T;
-  }
+  return new Promise((resolve) => {
+    const callbackName = `slCallback_${Date.now()}_${jsonpCounter++}`;
+    const script = document.createElement('script');
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const cleanup = () => {
+      delete (window as any)[callbackName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      clearTimeout(timeoutId);
+    };
+
+    (window as any)[callbackName] = (data: T) => {
+      cleanup();
+      resolve(data);
+    };
+
+    script.onerror = () => {
+      cleanup();
+      resolve({ success: false, error: 'No se pudo conectar con el backend (revisa VITE_GAS_URL o tu conexión).' } as unknown as T);
+    };
+
+    timeoutId = setTimeout(() => {
+      cleanup();
+      resolve({ success: false, error: 'Tiempo de espera agotado conectando con el backend.' } as unknown as T);
+    }, 15000);
+
+    const url = `${GAS_URL}?action=${encodeURIComponent(action)}&payload=${encodeURIComponent(JSON.stringify(payload))}&callback=${callbackName}`;
+    script.src = url;
+    document.body.appendChild(script);
+  });
 }
 
 export async function loginReal(username: string, password: string): Promise<LoginResponse> {

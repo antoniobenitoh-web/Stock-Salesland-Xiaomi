@@ -141,19 +141,25 @@ Google Sheets: Google Sheets · cierre dd/mm/yyyy"*.
 - **`price` (precio):** tampoco viene en la hoja `informe`, se deja a
   `0`. Si tienes un precio de referencia en otra hoja, dímelo y lo
   incorporamos.
-- **CORS y por qué se usa GET, no POST:** al llamar a Apps Script con
-  `fetch(POST)` desde un dominio externo (GitHub Pages), Google redirige
-  internamente la petición (`script.google.com` →
-  `script.googleusercontent.com`) y esa redirección no siempre incluye
-  las cabeceras CORS correctas para `POST`, lo que el navegador reporta
-  como `Failed to fetch` aunque el backend funcione perfectamente. Por
-  eso `src/services/backend.ts` llama por **GET**, con los datos (usuario/
-  contraseña, o el objeto de sesión) codificados como JSON en un
-  parámetro de la URL (`?action=...&payload=...`). Sigue viajando cifrado
-  (HTTPS), pero queda visible en el historial del navegador y en el
-  registro de ejecuciones de Apps Script — razonable para una
-  herramienta interna, pero tenlo en cuenta si más adelante quieres
-  reforzarlo más.
+- **CORS — la causa real y la solución definitiva (JSONP):** las
+  llamadas `fetch()` a Apps Script desde un dominio externo (GitHub
+  Pages) fallan por CORS **tanto en GET como en POST** — no es un fallo
+  de configuración, es una limitación conocida y documentada de Apps
+  Script Web Apps: la respuesta real se sirve a través de una
+  redirección interna (`script.google.com` → `script.googleusercontent.com`)
+  que no incluye las cabeceras `Access-Control-Allow-Origin` que el
+  navegador necesita para que `fetch()`/`XMLHttpRequest` puedan **leer**
+  la respuesta. Por eso tanto `sitio-estatico/index.html` como
+  `src/services/backend.ts` usan **JSONP** en vez de `fetch()`: cargan
+  la respuesta como una etiqueta `<script src="...">` (con un parámetro
+  `callback=nombreDeFuncion`), y las etiquetas `<script>` **no están
+  sujetas a CORS** (es la misma razón por la que un `<script
+  src="https://cdn...">` de otra web funciona sin problemas). El
+  backend (`apps-script-backend/Codigo.gs`) reconoce el parámetro
+  `callback` y envuelve la respuesta como `callback(JSON...)` con tipo
+  MIME JavaScript en vez de JSON. Si en algún momento ves un error
+  distinto a "Failed to fetch"/CORS relacionado con la conexión,
+  probablemente ya no sea este problema.
 - **Sobre "Ejecutar como" en la implementación de Apps Script:** debe
   estar en **"Yo"** (tu cuenta), no en "El usuario que accede a la
   aplicación". Esto NO significa que cada persona tenga que autorizar

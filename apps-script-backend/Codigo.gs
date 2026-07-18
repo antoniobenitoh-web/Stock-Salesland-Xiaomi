@@ -1,21 +1,23 @@
 // ============================================================
-// CODIGO.GS — Backend como API JSON para el frontend React (Vite)
+// CODIGO.GS — Backend como API JSON/JSONP para el dashboard
 // ============================================================
 // Este backend YA NO sirve una interfaz HTML propia (doGet con
-// HtmlService). Ahora es una API que el frontend alojado en GitHub
-// Pages llama por fetch() con POST, en formato JSON:
+// HtmlService). Ahora es una API a la que el frontend (alojado en
+// GitHub Pages) llama mediante JSONP:
 //
-//   POST { action: "login", username, password }
-//     -> { success: true, user, permisos } | { success:false, error }
+//   GET ?action=login&payload={"username":...,"password":...}&callback=xxx
+//     -> xxx({ success: true, user, permisos }) | xxx({ success:false, error })
 //
-//   POST { action: "getStock", user }
-//     -> { success: true, fechaCierre, datos, permisos } | { success:false, error }
+//   GET ?action=getStock&payload={"user":{...}}&callback=xxx
+//     -> xxx({ success: true, fechaCierre, datos, permisos }) | xxx({ success:false, error })
 //
-// IMPORTANTE sobre CORS: el frontend hace fetch(GAS_URL, { method:'POST',
-// body: JSON.stringify(...) }) SIN fijar cabecera Content-Type. Eso hace
-// que el navegador la mande como "text/plain", lo cual evita el preflight
-// OPTIONS que Apps Script no sabe responder. No cambies eso en el
-// frontend o se romperá la conexión.
+// IMPORTANTE: se usa JSONP (respuesta envuelta en una función callback,
+// cargada como <script src="...">) y NO fetch(), porque Apps Script Web
+// Apps no añade las cabeceras CORS necesarias para que fetch() pueda
+// LEER la respuesta desde un dominio externo — es una limitación
+// conocida de Apps Script, no un fallo de configuración. Las etiquetas
+// <script> no están sujetas a CORS, así que JSONP sí funciona de forma
+// fiable. Ver la función doGet más abajo para el detalle.
 
 // ─────────────────────────────────────────
 // CONFIGURACIÓN GLOBAL
@@ -32,55 +34,47 @@ const CONFIG = {
 // ENRUTADORES PRINCIPALES
 // ─────────────────────────────────────────
 
-// GET: aquí es donde llega ahora la llamada real del frontend (ver nota
-// más abajo sobre por qué se usa GET en vez de POST). Si no viene
-// ?action=..., simplemente devuelve un JSON de estado para comprobar
-// rápidamente en el navegador que el backend está vivo.
+// GET: aquí es donde llega ahora la llamada real del frontend, vía
+// JSONP (ver nota importante más abajo). Si no viene ?action=..., se
+// devuelve un JSON de estado para comprobar rápido en el navegador que
+// el backend está vivo.
 //
-// NOTA IMPORTANTE SOBRE POST vs GET:
-// Al llamar a este Web App con fetch(POST) desde un dominio externo
-// (p. ej. GitHub Pages), Google redirige internamente la petición
-// (script.google.com -> script.googleusercontent.com) y esa redirección
-// no siempre añade las cabeceras CORS correctas para método POST, así
-// que el navegador bloquea la respuesta con "Failed to fetch" aunque el
-// backend funcione bien. Con GET esa redirección sí funciona de forma
-// fiable. Por eso el frontend (src/services/backend.ts) manda todo por
-// GET, con los datos codificados en la propia URL (?action=...&payload=...).
+// NOTA IMPORTANTE — POR QUÉ SE USA JSONP Y NO fetch():
+// Al llamar a este Web App con fetch() desde un dominio externo (GitHub
+// Pages), Google redirige internamente la petición (script.google.com
+// -> script.googleusercontent.com), y esa redirección no añade las
+// cabeceras CORS que el navegador necesita para PODER LEER la
+// respuesta con fetch — pasa tanto en GET como en POST, es una
+// limitación conocida y documentada de Apps Script Web Apps, no un
+// fallo de configuración. Por eso el frontend (sitio-estatico/index.html
+// y src/services/backend.ts) usa JSONP: carga la respuesta con una
+// etiqueta <script src="...&callback=xxx">, que NO está sujeta a CORS
+// (así es como funcionan también los <script src="cdn..."> de
+// chart.js/lucide). Si viene el parámetro "callback", se envuelve la
+// respuesta como "callback(JSON...)" con tipo MIME JavaScript en vez de
+// JSON.
 function doGet(e) {
   const params = (e && e.parameter) || {};
+  const callback = params.callback;
+
+  let resultObj;
   if (!params.action) {
-    return jsonResponse({
+    resultObj = {
       ok: true,
       servicio: 'Stock Salesland | Xiaomi API',
-      uso: 'Este endpoint espera peticiones GET con ?action=login|getStock&payload=<JSON codificado>'
-    });
+      uso: 'GET ?action=login|getStock&payload=<JSON codificado>&callback=<nombre de función JSONP>'
+    };
+  } else {
+    resultObj = routeAction(params.action, params.payload);
   }
 
-  let payload = {};
-  try {
-    if (params.payload) payload = JSON.parse(params.payload);
-  } catch (err) {
-    return jsonResponse({ success: false, error: 'Parámetro "payload" inválido (JSON mal formado): ' + err.message });
-  }
-
-  try {
-    switch (params.action) {
-      case 'login':
-        return handleLoginAction(payload);
-      case 'getStock':
-        return handleGetStockAction(payload);
-      default:
-        return jsonResponse({ success: false, error: 'Acción no reconocida: ' + params.action });
-    }
-  } catch (err) {
-    return jsonResponse({ success: false, error: err.message });
-  }
+  return buildOutput(resultObj, callback);
 }
 
-// POST: se deja también disponible por si en el futuro quieres llamarlo
-// desde un entorno sin las limitaciones de CORS del navegador (por
-// ejemplo, otro backend, Postman, o un Apps Script a Apps Script). El
-// frontend web ya NO usa esta vía por el motivo explicado arriba.
+// POST: se deja disponible por si en el futuro llamas a esta API desde
+// un entorno sin las limitaciones de CORS del navegador (otro backend,
+// Postman, Apps Script a Apps Script...). El frontend web ya NO usa
+// esta vía.
 function doPost(e) {
   let body;
   try {
@@ -89,54 +83,87 @@ function doPost(e) {
     }
     body = JSON.parse(e.postData.contents);
   } catch (err) {
-    return jsonResponse({ success: false, error: 'Petición inválida (JSON mal formado): ' + err.message });
+    return buildOutput({ success: false, error: 'Petición inválida (JSON mal formado): ' + err.message });
+  }
+
+  let resultObj;
+  switch (body.action) {
+    case 'login':
+      resultObj = computeLogin(body);
+      break;
+    case 'getStock':
+      resultObj = computeGetStock(body);
+      break;
+    default:
+      resultObj = { success: false, error: 'Acción no reconocida: ' + body.action };
+  }
+  return buildOutput(resultObj);
+}
+
+// Enrutado compartido para las llamadas por GET (login/getStock), a
+// partir del parámetro "payload" (JSON codificado en la URL).
+function routeAction(action, payloadStr) {
+  let payload = {};
+  try {
+    if (payloadStr) payload = JSON.parse(payloadStr);
+  } catch (err) {
+    return { success: false, error: 'Parámetro "payload" inválido (JSON mal formado): ' + err.message };
   }
 
   try {
-    switch (body.action) {
+    switch (action) {
       case 'login':
-        return handleLoginAction(body);
+        return computeLogin(payload);
       case 'getStock':
-        return handleGetStockAction(body);
+        return computeGetStock(payload);
       default:
-        return jsonResponse({ success: false, error: 'Acción no reconocida: ' + body.action });
+        return { success: false, error: 'Acción no reconocida: ' + action };
     }
   } catch (err) {
-    return jsonResponse({ success: false, error: err.message });
+    return { success: false, error: err.message };
   }
 }
 
-function jsonResponse(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
+// Construye la respuesta final: JSONP (envuelta en la función callback)
+// si se pidió, o JSON normal si no.
+function buildOutput(obj, callback) {
+  const json = JSON.stringify(obj);
+  const isValidCallbackName = callback && /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(callback);
+
+  if (isValidCallbackName) {
+    return ContentService.createTextOutput(callback + '(' + json + ');')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return ContentService.createTextOutput(json).setMimeType(ContentService.MimeType.JSON);
 }
 
 // ─────────────────────────────────────────
-// ACCIONES DE LA API
+// ACCIONES DE LA API (devuelven objetos planos, no respuestas HTTP —
+// eso lo hace buildOutput, para poder envolver en JSONP o no)
 // ─────────────────────────────────────────
-function handleLoginAction(body) {
+function computeLogin(payload) {
   try {
-    const user = loginUser(body.username, body.password);
-    return jsonResponse({ success: true, user: user, permisos: getPermissionsByRol(user.rol) });
+    const user = loginUser(payload.username, payload.password);
+    return { success: true, user: user, permisos: getPermissionsByRol(user.rol) };
   } catch (e) {
-    return jsonResponse({ success: false, error: e.message });
+    return { success: false, error: e.message };
   }
 }
 
-function handleGetStockAction(body) {
+function computeGetStock(payload) {
   try {
-    if (!body.user || !body.user.usuario) {
-      return jsonResponse({ success: false, error: 'Sesión no válida. Vuelve a iniciar sesión.' });
+    if (!payload.user || !payload.user.usuario) {
+      return { success: false, error: 'Sesión no válida. Vuelve a iniciar sesión.' };
     }
-    const resultado = getStockDataSecure(body.user);
-    return jsonResponse({
+    const resultado = getStockDataSecure(payload.user);
+    return {
       success: true,
       fechaCierre: resultado.fechaCierre,
       datos: resultado.datos,
-      permisos: getPermissionsByRol(body.user.rol)
-    });
+      permisos: getPermissionsByRol(payload.user.rol)
+    };
   } catch (e) {
-    return jsonResponse({ success: false, error: e.message });
+    return { success: false, error: e.message };
   }
 }
 
