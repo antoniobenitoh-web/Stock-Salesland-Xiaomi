@@ -82,7 +82,12 @@
 
         .btn-logout { width: 100%; padding: 10px; background-color: rgba(224, 49, 49, 0.15); border: 1px solid rgba(224, 49, 49, 0.4); border-radius: 8px; color: #ff8787; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; }
         .btn-logout:hover { background-color: rgba(224, 49, 49, 0.28); }
-        .filter-group.perm-hidden { display: none; }
+        .filter-group.perm-locked { position: relative; }
+        .filter-group.perm-locked .dropdown-trigger { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+        .filter-group.perm-locked label { opacity: 0.6; }
+        .filter-group.perm-locked::after {
+            content: "🔒"; position: absolute; top: 0; right: 0; font-size: 0.7rem; opacity: 0.7;
+        }
         .nav-user-badge {
             display: flex; align-items: center; gap: 6px; background-color: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.15); padding: 5px 12px; border-radius: 20px;
@@ -735,13 +740,15 @@
             document.getElementById('loading-text').innerHTML = `<span style="color:#e63946;">Error al cargar datos: ${error.message}</span>`;
         }
 
-        // Oculta en el sidebar los filtros que el rol del usuario no tiene permitidos
+        // Bloquea (visible pero deshabilitado, con 🔒) los filtros que el
+        // rol del usuario no tiene permitido usar. Siempre se muestran
+        // los 7 filtros; solo cambia si se pueden tocar o no.
         function applyPermisosToFilters() {
             if (!currentPermisos || !currentPermisos.allowedFilters) return;
             const allowed = currentPermisos.allowedFilters;
             document.querySelectorAll('.filter-group[data-filter-key]').forEach(group => {
                 const key = group.getAttribute('data-filter-key');
-                group.classList.toggle('perm-hidden', !allowed.includes(key));
+                group.classList.toggle('perm-locked', !allowed.includes(key));
             });
         }
 
