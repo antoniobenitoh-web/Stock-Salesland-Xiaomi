@@ -23,7 +23,11 @@
 // CONFIGURACIÓN GLOBAL
 // ─────────────────────────────────────────
 const CONFIG = {
-  USERS_SPREADSHEET_ID: "1HgC4qVTZYbD17pQSiunxptck4C_VIv3_8DCgrYAfAGw",
+  // Antes eran dos Google Sheets distintos (uno para usuarios y otro
+  // para stock). Se unificaron en uno solo para evitar problemas de
+  // permisos/acceso entre archivos: ahora "usuarios" es simplemente
+  // otra pestaña dentro del mismo Sheets que tiene "informe".
+  USERS_SPREADSHEET_ID: "1f_r6aBfx0MUPmPIfNaj71Ygt4acMw4W6sQLdl_dw5hQ",
   USERS_SHEET_NAME: "usuarios",
   STOCK_SPREADSHEET_ID: "1f_r6aBfx0MUPmPIfNaj71Ygt4acMw4W6sQLdl_dw5hQ",
   STOCK_SHEET_NAME: "informe",
@@ -261,6 +265,14 @@ const PERMISOS = {
   Manager: {
     allowedFilters: ['Familia','SubFamilia','Modelo','Region','Zona','PR','StoreName']
   },
+  // "am" (Account Manager) y "administradora" tienen el mismo nivel de
+  // acceso completo que Manager — son roles de gestión/corporativos.
+  am: {
+    allowedFilters: ['Familia','SubFamilia','Modelo','Region','Zona','PR','StoreName']
+  },
+  administradora: {
+    allowedFilters: ['Familia','SubFamilia','Modelo','Region','Zona','PR','StoreName']
+  },
   GPV: {
     allowedFilters: ['Familia','SubFamilia','Modelo','Zona','PR','StoreName']
   },
@@ -270,7 +282,12 @@ const PERMISOS = {
 };
 
 function getPermissionsByRol(rol) {
-  return PERMISOS[rol] || { allowedFilters: ['Familia','SubFamilia','Modelo'] };
+  // Comparación insensible a mayúsculas/minúsculas: en la hoja de
+  // usuarios los roles pueden estar escritos como "am", "AM", "Am"...
+  const key = Object.keys(PERMISOS).find(
+    (k) => k.toLowerCase() === (rol || '').toString().trim().toLowerCase()
+  );
+  return key ? PERMISOS[key] : { allowedFilters: ['Familia','SubFamilia','Modelo'] };
 }
 
 // ─────────────────────────────────────────
@@ -281,18 +298,21 @@ function getStockDataSecure(user) {
 
   const raw = getRawStockData();
   let datos = raw.datos;
+  const rolNormalizado = user.rol.toString().trim().toLowerCase();
 
-  if (user.rol === 'GPV') {
+  if (rolNormalizado === 'gpv') {
     const region = (user.region || '').toLowerCase();
     const centros = (user.centros || []).map(c => c.toLowerCase());
     datos = datos.filter(r =>
       r.Region.toLowerCase() === region &&
       (centros.includes('todos') || centros.includes(r.StoreName.toLowerCase()) || centros.includes(r.PR.toLowerCase()))
     );
-  } else if (user.rol === 'Promotor') {
+  } else if (rolNormalizado === 'promotor') {
     const tienda = (user.tienda || '').toLowerCase();
     datos = datos.filter(r => r.StoreName.toLowerCase() === tienda);
   }
+  // Cualquier otro rol (Manager, am, administradora...) ve todo el
+  // stock sin restricción, igual que antes.
 
   return { fechaCierre: raw.fechaCierre, datos: datos };
 }

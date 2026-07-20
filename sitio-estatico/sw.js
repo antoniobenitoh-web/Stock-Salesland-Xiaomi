@@ -8,7 +8,7 @@
 // Si NO subes este número, es fácil que el navegador siga sirviendo el
 // HTML antiguo desde caché indefinidamente aunque publiques cambios en
 // GitHub — es justo lo que pasó la primera vez que se usó JSONP.
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const CACHE_NAME = `stock-xiaomi-shell-${CACHE_VERSION}`;
 
 const APP_SHELL = [
