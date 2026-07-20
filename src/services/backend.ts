@@ -76,10 +76,14 @@ function callBackend<T>(action: string, payload: Record<string, unknown>): Promi
       resolve({ success: false, error: 'No se pudo conectar con el backend (revisa VITE_GAS_URL o tu conexión).' } as unknown as T);
     };
 
+    // "getStock" tiene que recorrer toda la hoja "informe" la primera
+    // vez (hasta que entra la caché de 10 min), así que le damos más
+    // margen que a "login" (que es casi instantáneo).
+    const timeoutMs = action === 'getStock' ? 45000 : 20000;
     timeoutId = setTimeout(() => {
       cleanup();
       resolve({ success: false, error: 'Tiempo de espera agotado conectando con el backend.' } as unknown as T);
-    }, 15000);
+    }, timeoutMs);
 
     const url = `${GAS_URL}?action=${encodeURIComponent(action)}&payload=${encodeURIComponent(JSON.stringify(payload))}&callback=${callbackName}`;
     script.src = url;
