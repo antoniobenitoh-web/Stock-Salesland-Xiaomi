@@ -190,6 +190,10 @@
         .mobile-tabs-strip .nav-tab { flex-shrink: 0; padding: 8px 14px; border-radius: 8px; }
         .mobile-tabs-strip .nav-tab.active { background-color: rgba(255, 103, 0, 0.15); }
 
+        /* BOTÓN DE PLEGAR/DESPLEGAR (solo móvil/PWA) */
+        .mobile-collapse-toggle { display: none; }
+        .mobile-collapse-toggle i { transition: transform 0.2s ease; }
+
         /* BARRA DE BÚSQUEDA Y CONTROL SEGMENTADO */
         .search-container-bar { 
             display: flex; align-items: center; background-color: var(--salesland-blue); 
@@ -291,6 +295,13 @@
             .nav-tabs-pc { display: none; }
             .nav-tabs-mobile-container { display: none; } /* sustituido por .mobile-tabs-strip */
             .mobile-tabs-strip { display: flex; }
+            .mobile-collapse-toggle {
+                display: flex; align-items: center; justify-content: center; width: 100%;
+                background-color: var(--salesland-blue); border: none; cursor: pointer;
+                color: #adb5bd; padding: 3px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            }
+            .mobile-tabs-strip.collapsed,
+            #search-container-bar.collapsed { display: none !important; }
             .kpi-grid { grid-template-columns: 1fr; }
             .view-workspace { padding: 10px; }
             .search-container-bar { flex-direction: column; align-items: stretch; gap: 8px; }
@@ -433,9 +444,13 @@
             </div>
         </nav>
 
+        <button class="mobile-collapse-toggle" id="btn-collapse-topbars" title="Ocultar/mostrar departamentos y búsqueda">
+            <i data-lucide="chevron-up" style="width:14px; height:14px;"></i>
+        </button>
+
         <div class="mobile-tabs-strip" id="mobile-tabs-strip"></div>
 
-        <div class="search-container-bar">
+        <div class="search-container-bar" id="search-container-bar">
             <div class="search-input-row">
                 <div class="search-icon-left">
                     <i data-lucide="search" style="width:18px; height:18px;"></i>
@@ -681,6 +696,16 @@
             lucide.createIcons();
 
             document.getElementById('btn-force-refresh').addEventListener('click', forceRefreshStock);
+
+            document.getElementById('btn-collapse-topbars').addEventListener('click', () => {
+                const strip = document.getElementById('mobile-tabs-strip');
+                const searchBar = document.getElementById('search-container-bar');
+                const icon = document.querySelector('#btn-collapse-topbars i');
+                const collapsed = strip.classList.toggle('collapsed');
+                searchBar.classList.toggle('collapsed', collapsed);
+                icon.setAttribute('data-lucide', collapsed ? 'chevron-down' : 'chevron-up');
+                lucide.createIcons();
+            });
 
             const savedSession = sessionStorage.getItem('sl_session');
             if (savedSession) {
