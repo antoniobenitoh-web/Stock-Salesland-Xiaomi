@@ -414,6 +414,9 @@
             <div class="nav-right-date">
                 <i data-lucide="calendar" style="width:14px; height:14px; color:var(--xiaomi-orange);"></i>
                 <span>actualizado cierre: <strong id="lbl-fecha-cierre">...</strong></span>
+                <button id="btn-force-refresh" title="Forzar actualización desde Google Sheets (ignora la caché de hasta 6h)" style="background:none; border:none; cursor:pointer; color:#e9ecef; display:flex; align-items:center; padding:0; margin-left:4px;">
+                    <i data-lucide="refresh-cw" style="width:13px; height:13px;"></i>
+                </button>
             </div>
         </nav>
 
@@ -660,6 +663,8 @@
         window.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
 
+            document.getElementById('btn-force-refresh').addEventListener('click', forceRefreshStock);
+
             const savedSession = sessionStorage.getItem('sl_session');
             if (savedSession) {
                 try {
@@ -674,6 +679,35 @@
             }
             document.getElementById('login-screen').style.display = 'flex';
         });
+
+        // Fuerza una relectura de la hoja "informe" ignorando la caché de
+        // hasta 6h — útil si acabas de actualizar el stock a mitad de día
+        // y no quieres esperar a que caduque sola. No reinicia filtros ni
+        // pestañas, solo refresca los datos y vuelve a pintar.
+        async function forceRefreshStock() {
+            if (!currentUser) return;
+            const btn = document.getElementById('btn-force-refresh');
+            const icon = btn.querySelector('i');
+            btn.disabled = true;
+            icon.style.animation = 'spin 0.8s linear infinite';
+
+            const resp = await callBackend('getStock', { user: currentUser, forceRefresh: true });
+
+            btn.disabled = false;
+            icon.style.animation = '';
+
+            if (!resp.success) {
+                alert('No se pudo actualizar: ' + (resp.error || 'error desconocido'));
+                return;
+            }
+            document.getElementById('lbl-fecha-cierre').textContent = resp.fechaCierre || 'N/D';
+            stockData = resp.datos || [];
+            if (resp.permisos) currentPermisos = resp.permisos;
+            applyPermisosToFilters();
+            populateDropdownFilters();
+            labelLockedFilters();
+            renderDashboard();
+        }
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();

@@ -33,6 +33,42 @@ una URL de script.google.com**.
 
 He verificado que `npm run build` termina sin errores con estos cambios.
 
+## ⚡ Optimizaciones de rendimiento aplicadas
+
+- **Lectura acotada de columnas**: antes se leía `getDataRange()` (todas
+  las columnas de la hoja `informe`, aunque estén vacías o no se usen).
+  Ahora se lee solo hasta la columna AC (29), que es la última que hace
+  falta — menos datos que viajan desde Google Sheets y menos que
+  procesar en cada lectura.
+- **Caché de 6 horas** (el máximo que permite `CacheService` en Apps
+  Script) en vez de 10 minutos. Como el stock parece ser una foto fija
+  del día (hay una "fecha de cierre"), esto hace que casi todas las
+  peticiones del día se sirvan desde caché en memoria en vez de releer
+  y reprocesar la hoja entera, que es la parte lenta.
+- **`warmStockCache()` — mantener la caché siempre caliente**: es una
+  función pensada para un disparador de tiempo (trigger) de Apps Script,
+  para que la caché se refresque sola en segundo plano cada pocas horas
+  y ningún usuario real tenga que sufrir nunca la lectura completa y
+  lenta de la hoja. Para activarlo (recomendado, 2 minutos, una sola
+  vez):
+  1. En el editor de Apps Script, icono del reloj ⏰ ("Activadores").
+  2. "+ Añadir activador".
+  3. Función: `warmStockCache` · Origen: "Basado en tiempo" · Tipo:
+     "Temporizador de horas" → cada 4 horas.
+  4. Guardar (autoriza permisos la primera vez que te lo pida).
+- **Botón "🔄 Actualizar"** junto a la fecha de cierre en el dashboard:
+  fuerza una relectura real de la hoja ignorando la caché de 6h, por si
+  cambias el stock a mitad de día y no quieres esperar a que caduque
+  sola. No reinicia filtros ni pestañas, solo refresca los datos.
+
+Si en el futuro la hoja `informe` crece mucho (decenas de miles de
+filas) y el primer acceso del día sigue notándose lento pese a
+`warmStockCache`, las siguientes optimizaciones adicionales son
+razonables y no muy complejas de añadir: paginar la respuesta en vez de
+mandarla entera, o mover el filtrado por rol a la propia lectura de
+Sheets en vez de traer todo y filtrar en memoria. Dímelo si llegas a ese
+punto.
+
 ## 🔄 Cambio de arquitectura: ahora se despliega tu diseño original
 
 A partir de aquí, **lo que se publica en GitHub Pages ya no es la app de

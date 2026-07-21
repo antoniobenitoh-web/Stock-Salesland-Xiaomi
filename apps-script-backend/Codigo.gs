@@ -31,7 +31,12 @@ const CONFIG = {
   USERS_SHEET_NAME: "usuarios",
   STOCK_SPREADSHEET_ID: "1f_r6aBfx0MUPmPIfNaj71Ygt4acMw4W6sQLdl_dw5hQ",
   STOCK_SHEET_NAME: "informe",
-  CACHE_EXPIRATION_SEC: 600
+  // Máximo permitido por CacheService de Apps Script: 21600 segundos
+  // (6 horas). Como el stock parece actualizarse una vez al día (hay
+  // una "fecha de cierre"), esto reduce muchísimo cuántas veces hay que
+  // releer y reprocesar la hoja entera — la mayoría del día, todas las
+  // peticiones se sirven desde caché en vez de leer Sheets de nuevo.
+  CACHE_EXPIRATION_SEC: 21600
 };
 
 // ─────────────────────────────────────────
@@ -159,7 +164,7 @@ function computeGetStock(payload) {
     if (!payload.user || !payload.user.usuario) {
       return { success: false, error: 'Sesión no válida. Vuelve a iniciar sesión.' };
     }
-    const resultado = getStockDataSecure(payload.user);
+    const resultado = getStockDataSecure(payload.user, !!payload.forceRefresh);
     return {
       success: true,
       fechaCierre: resultado.fechaCierre,
@@ -304,10 +309,10 @@ function getPermissionsByRol(rol) {
 // ─────────────────────────────────────────
 // DATOS DE STOCK (con caché y seguridad)
 // ─────────────────────────────────────────
-function getStockDataSecure(user) {
+function getStockDataSecure(user, forceRefresh) {
   if (!user || !user.rol) throw new Error('Sesión no válida.');
 
-  const raw = getRawStockData();
+  const raw = getRawStockData(forceRefresh);
   let datos = raw.datos;
   const rolNormalizado = user.rol.toString().trim().toLowerCase();
 
@@ -328,16 +333,26 @@ function getStockDataSecure(user) {
   return { fechaCierre: raw.fechaCierre, datos: datos };
 }
 
-function getRawStockData() {
-  const cached = CacheHelper.get('STOCK_RAW');
-  if (cached) return cached;
+function getRawStockData(forceRefresh) {
+  if (!forceRefresh) {
+    const cached = CacheHelper.get('STOCK_RAW');
+    if (cached) return cached;
+  }
 
   const ss = SpreadsheetApp.openById(CONFIG.STOCK_SPREADSHEET_ID);
   const sheet = ss.getSheetByName(CONFIG.STOCK_SHEET_NAME);
   if (!sheet) throw new Error("Hoja 'informe' no encontrada.");
 
-  const data = sheet.getDataRange().getValues();
-  if (data.length <= 1) return { fechaCierre: 'N/D', datos: [] };
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return { fechaCierre: 'N/D', datos: [] };
+
+  // OPTIMIZACIÓN: en vez de getDataRange() (que lee TODAS las columnas
+  // que la hoja tenga, aunque estén vacías o no las usemos), leemos
+  // solo hasta la columna AC (29), que es la última que necesitamos.
+  // Si la hoja tiene columnas extra a la derecha (formato, notas...),
+  // esto evita transferir y procesar datos que no usamos para nada.
+  const LAST_COL_NEEDED = 29; // columna AC
+  const data = sheet.getRange(1, 1, lastRow, LAST_COL_NEEDED).getValues();
 
   // Fecha de cierre en columna L (índice 11) de la primera fila de datos
   let fechaCierre = 'N/D';
@@ -387,4 +402,25 @@ function getRawStockData() {
   const result = { fechaCierre: fechaCierre, datos: datos };
   CacheHelper.put('STOCK_RAW', result, CONFIG.CACHE_EXPIRATION_SEC);
   return result;
+}
+
+// ─────────────────────────────────────────
+// MANTENER LA CACHÉ SIEMPRE CALIENTE (recomendado)
+// ─────────────────────────────────────────
+// Esta función no la llama el frontend — es para un disparador (trigger)
+// de tiempo que la ejecute automáticamente cada pocas horas, así el
+// primer usuario del día nunca sufre la lectura lenta y completa de la
+// hoja: siempre encuentra la caché ya preparada por este disparador.
+//
+// CÓMO ACTIVARLO (una sola vez, dos minutos):
+//   1. En el editor de Apps Script, icono del reloj ⏰ ("Activadores") en
+//      el menú de la izquierda.
+//   2. "+ Añadir activador".
+//   3. Función a ejecutar: warmStockCache
+//   4. Origen del evento: "Basado en tiempo"
+//   5. Tipo de activador: "Temporizador de horas" → cada 4 horas
+//      (con caché de 6h, así nunca llega a caducar entre ejecuciones).
+//   6. Guardar (te pedirá autorizar permisos la primera vez).
+function warmStockCache() {
+  getRawStockData(true); // true = forzar relectura, ignorando la caché
 }
