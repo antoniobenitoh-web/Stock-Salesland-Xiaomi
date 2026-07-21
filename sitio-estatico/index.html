@@ -180,12 +180,23 @@
         .nav-tabs-mobile-select { width: 100%; padding: 6px; border: 1px solid var(--xiaomi-orange); border-radius: 8px; background-color: rgba(255, 255, 255, 0.1); color: #ffffff; outline: none; font-size: 0.8rem; }
         .nav-tabs-mobile-select option { background-color: var(--salesland-blue); color: #fff; }
 
+        /* TIRA DE ICONOS POR DEPARTAMENTO (solo móvil) — franja propia entre
+           el navbar y la barra de búsqueda, para que no queden apretados */
+        .mobile-tabs-strip {
+            display: none; background-color: var(--salesland-blue);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 6px 10px; gap: 4px; overflow-x: auto; flex-shrink: 0;
+        }
+        .mobile-tabs-strip .nav-tab { flex-shrink: 0; padding: 8px 14px; border-radius: 8px; }
+        .mobile-tabs-strip .nav-tab.active { background-color: rgba(255, 103, 0, 0.15); }
+
         /* BARRA DE BÚSQUEDA Y CONTROL SEGMENTADO */
         .search-container-bar { 
             display: flex; align-items: center; background-color: var(--salesland-blue); 
             padding: 6px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); 
             gap: 12px; min-height: 44px; flex-shrink: 0;
         }
+        .search-input-row { display: flex; align-items: center; gap: 8px; }
         .search-icon-left { color: #adb5bd; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         
         .search-wrapper { flex-grow: 1; max-width: 260px; }
@@ -278,10 +289,12 @@
             .sidebar { position: fixed; left: 0; top: 0; transform: translateX(-100%); }
             .sidebar:not(.collapsed) { transform: translateX(0); }
             .nav-tabs-pc { display: none; }
-            .nav-tabs-mobile-container { display: block; }
+            .nav-tabs-mobile-container { display: none; } /* sustituido por .mobile-tabs-strip */
+            .mobile-tabs-strip { display: flex; }
             .kpi-grid { grid-template-columns: 1fr; }
             .view-workspace { padding: 10px; }
             .search-container-bar { flex-direction: column; align-items: stretch; gap: 8px; }
+            .search-input-row { width: 100%; }
             .search-wrapper { max-width: 100%; }
             .navbar { padding: 0 10px; }
         }
@@ -420,12 +433,16 @@
             </div>
         </nav>
 
+        <div class="mobile-tabs-strip" id="mobile-tabs-strip"></div>
+
         <div class="search-container-bar">
-            <div class="search-icon-left">
-                <i data-lucide="search" style="width:18px; height:18px;"></i>
-            </div>
-            <div class="search-wrapper">
-                <input type="text" id="global-search" placeholder="Buscar por modelo...">
+            <div class="search-input-row">
+                <div class="search-icon-left">
+                    <i data-lucide="search" style="width:18px; height:18px;"></i>
+                </div>
+                <div class="search-wrapper">
+                    <input type="text" id="global-search" placeholder="Buscar por modelo...">
+                </div>
             </div>
 
             <div class="gfk-toggle-container" id="gfk-view-toggle">
@@ -826,11 +843,18 @@
         function buildIconsOnlyMenu() {
             const pcContainer = document.getElementById('dynamic-tabs-pc');
             const mobileSelect = document.getElementById('dynamic-tabs-mobile');
+            const mobileStrip = document.getElementById('mobile-tabs-strip');
+            // El "General" inicial también se replica en la tira móvil
+            mobileStrip.innerHTML = `
+                <div class="nav-tab active" data-tab="general" title="Vista General Corporativa">
+                    <i data-lucide="layout-dashboard"></i>
+                </div>`;
+
             const realIdsInSheet = [...new Set(stockData.map(item => cleanFamilyId(item.Familia)))].filter(Boolean);
 
             definedMenuConfig.forEach(cfg => {
                 if(realIdsInSheet.includes(cfg.id)) {
-                    createMenuElements(pcContainer, mobileSelect, cfg.id, cfg.name, cfg.icon);
+                    createMenuElements(pcContainer, mobileSelect, mobileStrip, cfg.id, cfg.name, cfg.icon);
                 }
             });
 
@@ -838,12 +862,12 @@
             const restoIds = realIdsInSheet.filter(id => !configuredIds.includes(id)).sort((a,b) => parseFloat(a) - parseFloat(b));
 
             restoIds.forEach(id => {
-                createMenuElements(pcContainer, mobileSelect, id, `Familia ${id}`, "package");
+                createMenuElements(pcContainer, mobileSelect, mobileStrip, id, `Familia ${id}`, "package");
             });
             lucide.createIcons();
         }
 
-        function createMenuElements(pcContainer, mobileSelect, id, fullName, iconName) {
+        function createMenuElements(pcContainer, mobileSelect, mobileStrip, id, fullName, iconName) {
             const tab = document.createElement('div');
             tab.className = 'nav-tab';
             tab.setAttribute('data-tab', id);
@@ -855,6 +879,13 @@
             opt.value = id;
             opt.textContent = `${id} - ${fullName}`;
             mobileSelect.appendChild(opt);
+
+            const mobileTab = document.createElement('div');
+            mobileTab.className = 'nav-tab';
+            mobileTab.setAttribute('data-tab', id);
+            mobileTab.setAttribute('title', `${id} - ${fullName}`);
+            mobileTab.innerHTML = `<i data-lucide="${iconName}"></i>`;
+            mobileStrip.appendChild(mobileTab);
         }
 
         function populateDropdownFilters() {
@@ -1010,8 +1041,18 @@
                 const tabEl = e.target.closest('.nav-tab');
                 if (!tabEl) return;
                 document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-                tabEl.classList.add('active');
-                
+                document.querySelectorAll(`.nav-tab[data-tab="${tabEl.getAttribute('data-tab')}"]`).forEach(t => t.classList.add('active'));
+
+                document.getElementById('dynamic-tabs-mobile').value = tabEl.getAttribute('data-tab');
+                handleTabChange(tabEl.getAttribute('data-tab'));
+            });
+
+            document.getElementById('mobile-tabs-strip').addEventListener('click', (e) => {
+                const tabEl = e.target.closest('.nav-tab');
+                if (!tabEl) return;
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll(`.nav-tab[data-tab="${tabEl.getAttribute('data-tab')}"]`).forEach(t => t.classList.add('active'));
+
                 document.getElementById('dynamic-tabs-mobile').value = tabEl.getAttribute('data-tab');
                 handleTabChange(tabEl.getAttribute('data-tab'));
             });
