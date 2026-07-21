@@ -731,6 +731,7 @@
             applyPermisosToFilters();
             buildIconsOnlyMenu();
             populateDropdownFilters();
+            labelLockedFilters();
             renderDashboard();
             setupEventListeners();
         }
@@ -749,6 +750,24 @@
             document.querySelectorAll('.filter-group[data-filter-key]').forEach(group => {
                 const key = group.getAttribute('data-filter-key');
                 group.classList.toggle('perm-locked', !allowed.includes(key));
+            });
+        }
+
+        // Para los filtros bloqueados, en vez de dejar "Todos", muestra
+        // directamente el valor real asignado (p. ej. su región o su
+        // tienda) — el propio backend ya ha limitado stockData a ese
+        // único valor, así que basta con leerlo de los datos recibidos.
+        function labelLockedFilters() {
+            document.querySelectorAll('.filter-group.perm-locked[data-filter-key]').forEach(group => {
+                const key = group.getAttribute('data-filter-key');
+                const config = filterMapping[key];
+                if (!config) return;
+                const uniqueValues = [...new Set(stockData.map(item => item[key]))].filter(Boolean);
+                if (uniqueValues.length === 1) {
+                    document.getElementById(config.txtId).textContent = uniqueValues[0];
+                } else if (uniqueValues.length > 1) {
+                    document.getElementById(config.txtId).textContent = `${uniqueValues.length} asignados`;
+                }
             });
         }
 

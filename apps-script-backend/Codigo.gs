@@ -262,20 +262,31 @@ function loginUser(username, password) {
 // PERMISOS POR ROL
 // ─────────────────────────────────────────
 const PERMISOS = {
+  // Acceso completo a los 7 filtros: roles de gestión/corporativos.
   Manager: {
     allowedFilters: ['Familia','SubFamilia','Modelo','Region','Zona','PR','StoreName']
   },
-  // "am" (Account Manager) y "administradora" tienen el mismo nivel de
-  // acceso completo que Manager — son roles de gestión/corporativos.
   am: {
     allowedFilters: ['Familia','SubFamilia','Modelo','Region','Zona','PR','StoreName']
   },
   administradora: {
     allowedFilters: ['Familia','SubFamilia','Modelo','Region','Zona','PR','StoreName']
   },
+  coordinadora: {
+    allowedFilters: ['Familia','SubFamilia','Modelo','Region','Zona','PR','StoreName']
+  },
+  // GPV y trainer: todos los filtros excepto Región (se bloquea a su
+  // región asignada, columna N de "usuarios"). El propio backend ya
+  // limita los datos a esa región en getStockDataSecure.
   GPV: {
     allowedFilters: ['Familia','SubFamilia','Modelo','Zona','PR','StoreName']
   },
+  trainer: {
+    allowedFilters: ['Familia','SubFamilia','Modelo','Zona','PR','StoreName']
+  },
+  // Promotor: solo Familia/SubFamilia/Modelo. Región, Zona, PR y Store
+  // Name se bloquean porque está asignado a una única tienda (columna K
+  // de "usuarios"), y el backend ya limita los datos a esa tienda.
   Promotor: {
     allowedFilters: ['Familia','SubFamilia','Modelo']
   }
@@ -300,19 +311,19 @@ function getStockDataSecure(user) {
   let datos = raw.datos;
   const rolNormalizado = user.rol.toString().trim().toLowerCase();
 
-  if (rolNormalizado === 'gpv') {
+  if (rolNormalizado === 'gpv' || rolNormalizado === 'trainer') {
+    // Ven todo el stock de SU región (columna N de "usuarios"), sin más
+    // restricción — dentro de su región pueden ver cualquier zona,
+    // PR o tienda.
     const region = (user.region || '').toLowerCase();
-    const centros = (user.centros || []).map(c => c.toLowerCase());
-    datos = datos.filter(r =>
-      r.Region.toLowerCase() === region &&
-      (centros.includes('todos') || centros.includes(r.StoreName.toLowerCase()) || centros.includes(r.PR.toLowerCase()))
-    );
+    datos = datos.filter(r => r.Region.toLowerCase() === region);
   } else if (rolNormalizado === 'promotor') {
+    // Solo ven el stock de SU tienda asignada (columna K de "usuarios").
     const tienda = (user.tienda || '').toLowerCase();
     datos = datos.filter(r => r.StoreName.toLowerCase() === tienda);
   }
-  // Cualquier otro rol (Manager, am, administradora...) ve todo el
-  // stock sin restricción, igual que antes.
+  // Cualquier otro rol (Manager, am, administradora, coordinadora...)
+  // ve todo el stock sin restricción.
 
   return { fechaCierre: raw.fechaCierre, datos: datos };
 }
