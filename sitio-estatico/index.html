@@ -655,7 +655,7 @@
                 // "getStock" tiene que recorrer toda la hoja "informe" la
                 // primera vez (hasta que entra la caché de 10 min), así que
                 // le damos más margen que a "login" (que es casi instantáneo).
-                const timeoutMs = action === 'getStock' ? 45000 : 20000;
+                const timeoutMs = (action === 'getStock' || action === 'initialize') ? 45000 : 20000;
                 timeoutId = setTimeout(() => {
                     cleanup();
                     resolve({ success: false, error: 'Tiempo de espera agotado conectando con el backend.' });
@@ -742,13 +742,7 @@
                 alert('No se pudo actualizar: ' + (resp.error || 'error desconocido'));
                 return;
             }
-            document.getElementById('lbl-fecha-cierre').textContent = resp.fechaCierre || 'N/D';
-            stockData = resp.datos || [];
-            if (resp.permisos) currentPermisos = resp.permisos;
-            applyPermisosToFilters();
-            populateDropdownFilters();
-            labelLockedFilters();
-            renderDashboard();
+            applyStockResponse(resp, { silent: true });
         }
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -761,7 +755,10 @@
             btn.disabled = true;
             btn.innerHTML = 'Comprobando...';
 
-            const resp = await callBackend('login', { username, password });
+            // OPTIMIZACIÓN: una sola llamada ("initialize") en vez de
+            // login() + getStock() por separado — se ahorra un viaje
+            // completo de ida y vuelta al backend.
+            const resp = await callBackend('initialize', { username, password });
 
             btn.disabled = false;
             btn.innerHTML = '<i data-lucide="log-in" style="width:16px; height:16px;"></i> Entrar';
@@ -776,7 +773,12 @@
             currentPermisos = resp.permisos;
             sessionStorage.setItem('sl_session', JSON.stringify({ user: currentUser, permisos: currentPermisos }));
             document.getElementById('login-screen').style.display = 'none';
-            startDashboardLoad();
+            document.getElementById('lbl-usuario-nombre').textContent = currentUser.nombre || currentUser.usuario;
+
+            if (resp.stockError) {
+                alert('Sesión iniciada, pero no se pudo cargar el stock: ' + resp.stockError);
+            }
+            applyStockResponse(resp, { silent: false });
         });
 
         document.getElementById('btn-logout').addEventListener('click', () => {
@@ -784,9 +786,55 @@
             window.location.reload();
         });
 
+        // ─────────────────────────────────────────
+        // CACHÉ EN EL NAVEGADOR (localStorage) — apertura instantánea
+        // ─────────────────────────────────────────
+        // Guarda el último stock recibido por usuario. Al reabrir la app
+        // con una sesión ya guardada, se pinta el dashboard al instante
+        // con estos datos (aunque sean de la última vez), mientras en
+        // segundo plano se comprueba si hay algo más reciente. Como
+        // "informe" solo se actualiza una vez al día, casi siempre esta
+        // caché ya es la versión del día — y aunque no lo sea, el usuario
+        // ve la app abrirse de inmediato en vez de esperar con un spinner.
+        function getStockCacheKey(username) {
+            return `sl_stock_cache_${(username || '').toLowerCase()}`;
+        }
+        function saveStockCache(username, fechaCierre, datos, permisos) {
+            try {
+                localStorage.setItem(getStockCacheKey(username), JSON.stringify({ fechaCierre, datos, permisos, savedAt: Date.now() }));
+            } catch (e) { /* localStorage lleno o no disponible: no es crítico, simplemente no cachea */ }
+        }
+        function loadStockCache(username) {
+            try {
+                const raw = localStorage.getItem(getStockCacheKey(username));
+                return raw ? JSON.parse(raw) : null;
+            } catch (e) { return null; }
+        }
+
         function startDashboardLoad() {
-            document.getElementById('loading-screen').style.display = 'flex';
             document.getElementById('lbl-usuario-nombre').textContent = currentUser.nombre || currentUser.usuario;
+
+            const cached = loadStockCache(currentUser.usuario);
+            if (cached) {
+                // Pintado instantáneo con la última copia conocida...
+                document.getElementById('loading-screen').style.display = 'none';
+                applyStockResponse(
+                    { success: true, fechaCierre: cached.fechaCierre, datos: cached.datos, permisos: cached.permisos || currentPermisos },
+                    { silent: false }
+                );
+                // ...y de fondo, sin bloquear nada, se comprueba si hay
+                // una versión más reciente (normalmente la del cierre de
+                // hoy, sobre todo si ya ha pasado la actualización de
+                // ~10:00). Si la hay, se actualiza la pantalla sola.
+                callBackend('getStock', { user: currentUser }).then((resp) => {
+                    if (resp.success) applyStockResponse(resp, { silent: true });
+                });
+                return;
+            }
+
+            // Sin caché previa (primera vez en este navegador): esperamos
+            // la respuesta real, como antes.
+            document.getElementById('loading-screen').style.display = 'flex';
             callBackend('getStock', { user: currentUser }).then(onDataLoadResult);
         }
 
@@ -795,21 +843,37 @@
                 onDataLoadFailure({ message: resp.error || 'No se pudo cargar el stock.' });
                 return;
             }
-            onDataLoadSuccess(resp);
+            applyStockResponse(resp, { silent: false });
         }
 
-        function onDataLoadSuccess(responseFromServer) {
+        // Aplica una respuesta de stock (venga de initialize, getStock, o
+        // de la caché local) y la guarda en localStorage. "silent" se usa
+        // para las actualizaciones en segundo plano: no reconstruye el
+        // menú de departamentos (para no duplicar pestañas) ni vuelve a
+        // registrar los listeners (ya están puestos desde la primera
+        // vez). Nota: si en una actualización silenciosa apareciera una
+        // familia totalmente nueva que nunca se había visto, su pestaña
+        // no se crearía hasta la próxima recarga completa — caso muy
+        // poco frecuente, ya que las familias no cambian de un día para
+        // otro.
+        function applyStockResponse(responseFromServer, opts) {
+            opts = opts || {};
             document.getElementById('lbl-fecha-cierre').textContent = responseFromServer.fechaCierre || "N/D";
             stockData = responseFromServer.datos || [];
             if (responseFromServer.permisos) currentPermisos = responseFromServer.permisos;
 
-            document.getElementById('loading-screen').style.display = 'none';
+            saveStockCache(currentUser.usuario, responseFromServer.fechaCierre, responseFromServer.datos, currentPermisos);
+
             applyPermisosToFilters();
-            buildIconsOnlyMenu();
+            if (!opts.silent) {
+                buildIconsOnlyMenu();
+            }
             populateDropdownFilters();
             labelLockedFilters();
             renderDashboard();
-            setupEventListeners();
+            if (!opts.silent) {
+                setupEventListeners();
+            }
         }
 
         function onDataLoadFailure(error) {

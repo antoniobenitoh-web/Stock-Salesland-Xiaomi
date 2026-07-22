@@ -11,6 +11,11 @@
 //   GET ?action=getStock&payload={"user":{...}}&callback=xxx
 //     -> xxx({ success: true, fechaCierre, datos, permisos }) | xxx({ success:false, error })
 //
+//   GET ?action=initialize&payload={"username":...,"password":...}&callback=xxx
+//     -> xxx({ success: true, user, permisos, fechaCierre, datos }) | xxx({ success:false, error })
+//     (login + stock en una sola llamada — la usa el login del frontend
+//     para no hacer dos viajes seguidos)
+//
 // IMPORTANTE: se usa JSONP (respuesta envuelta en una función callback,
 // cargada como <script src="...">) y NO fetch(), porque Apps Script Web
 // Apps no añade las cabeceras CORS necesarias para que fetch() pueda
@@ -103,6 +108,9 @@ function doPost(e) {
     case 'getStock':
       resultObj = computeGetStock(body);
       break;
+    case 'initialize':
+      resultObj = computeInitialize(body);
+      break;
     default:
       resultObj = { success: false, error: 'Acción no reconocida: ' + body.action };
   }
@@ -125,6 +133,8 @@ function routeAction(action, payloadStr) {
         return computeLogin(payload);
       case 'getStock':
         return computeGetStock(payload);
+      case 'initialize':
+        return computeInitialize(payload);
       default:
         return { success: false, error: 'Acción no reconocida: ' + action };
     }
@@ -174,6 +184,41 @@ function computeGetStock(payload) {
   } catch (e) {
     return { success: false, error: e.message };
   }
+}
+
+// OPTIMIZACIÓN: en vez de que el frontend haga login() y luego, ya con
+// la respuesta, un segundo viaje getStock(), esta acción hace las dos
+// cosas en una sola petición/respuesta. Con JSONP cada viaje tiene un
+// coste fijo (abrir conexión, redirección de Apps Script, etc.) aparte
+// del tiempo de cómputo — juntar ambas llamadas en una elimina ese
+// coste fijo duplicado y reduce el login a una sola ida y vuelta.
+function computeInitialize(payload) {
+  const loginResult = computeLogin(payload);
+  if (!loginResult.success) return loginResult;
+
+  const stockResult = computeGetStock({ user: loginResult.user });
+  if (!stockResult.success) {
+    // El login fue correcto pero falló la lectura de stock: se
+    // devuelve igualmente el usuario/permisos para no bloquear la
+    // sesión, junto con el error de stock para que el frontend lo
+    // muestre y permita reintentar solo esa parte.
+    return {
+      success: true,
+      user: loginResult.user,
+      permisos: loginResult.permisos,
+      fechaCierre: 'N/D',
+      datos: [],
+      stockError: stockResult.error
+    };
+  }
+
+  return {
+    success: true,
+    user: loginResult.user,
+    permisos: loginResult.permisos,
+    fechaCierre: stockResult.fechaCierre,
+    datos: stockResult.datos
+  };
 }
 
 // ─────────────────────────────────────────
