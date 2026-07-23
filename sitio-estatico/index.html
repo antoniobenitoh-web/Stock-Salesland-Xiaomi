@@ -15,6 +15,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3"></script>
     <style>
         :root {
             --xiaomi-orange: #FF6700;
@@ -285,6 +286,85 @@
         .table-footer-summary { padding: 8px 14px; border-top: 1px solid var(--border-color); background-color: #f8f9fa; font-size: 0.75rem; color: var(--text-main); font-weight: 700; display: flex; justify-content: space-between; }
 
         .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.25); z-index: 90; backdrop-filter: blur(2px); }
+
+        /* ─────────────────────────────────────────
+           DASHBOARD EJECUTIVO
+        ───────────────────────────────────────── */
+        .dash-view { display: flex; flex-direction: column; gap: 16px; animation: dashFadeIn 0.35s ease; }
+        @keyframes dashFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+        .dash-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+        .dash-kpi-card {
+            background-color: var(--bg-card); border-radius: var(--radius); padding: 16px 18px;
+            border: 1px solid var(--border-color); box-shadow: var(--shadow);
+            display: flex; align-items: center; gap: 14px;
+        }
+        .dash-kpi-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .dash-kpi-icon i { width: 20px; height: 20px; }
+        .dash-kpi-info h3 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); font-weight: 700; margin-bottom: 3px; }
+        .dash-kpi-value { font-size: 1.5rem; font-weight: 800; color: var(--salesland-blue); }
+
+        .dash-row-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+        .dash-card {
+            background-color: var(--bg-card); border-radius: var(--radius); padding: 18px 20px;
+            border: 1px solid var(--border-color); box-shadow: var(--shadow);
+        }
+        .dash-card-title { font-size: 0.88rem; font-weight: 700; color: var(--salesland-blue); display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        .dash-card-title-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 6px; }
+        .dash-card-title-row .dash-card-title { margin-bottom: 0; }
+
+        .dash-chart-holder { width: 100%; min-height: 300px; }
+        .dash-chart-holder.dash-chart-tall { min-height: 360px; }
+
+        /* Multiselect de productos (Gráfico 3) */
+        .dash-multiselect { position: relative; min-width: 220px; }
+        .dash-multiselect-trigger {
+            width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+            padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border-color);
+            background-color: #f8f9fa; color: var(--text-main); font-size: 0.8rem; font-weight: 600;
+            cursor: pointer;
+        }
+        .dash-multiselect-trigger:hover { border-color: var(--xiaomi-orange); }
+        .dash-multiselect-trigger span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+        .dash-multiselect-panel {
+            display: none; position: absolute; top: 100%; right: 0; margin-top: 6px; width: 300px; max-width: 90vw;
+            background-color: #fff; border: 1px solid var(--border-color); border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12); z-index: 50; padding: 10px;
+        }
+        .dash-multiselect-panel.show { display: block; }
+        .dash-multiselect-search {
+            width: 100%; padding: 7px 10px; border-radius: 7px; border: 1px solid var(--border-color);
+            font-size: 0.8rem; outline: none; margin-bottom: 8px;
+        }
+        .dash-multiselect-search:focus { border-color: var(--xiaomi-orange); }
+        .dash-multiselect-actions { display: flex; gap: 8px; margin-bottom: 8px; }
+        .dash-multiselect-actions button {
+            flex: 1; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border-color);
+            background-color: #f8f9fa; font-size: 0.72rem; font-weight: 600; color: var(--text-muted); cursor: pointer;
+        }
+        .dash-multiselect-actions button:hover { border-color: var(--xiaomi-orange); color: var(--xiaomi-orange); }
+        .dash-multiselect-list { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+        .dash-multiselect-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
+        .dash-multiselect-item:hover { background-color: #f8f9fa; }
+        .dash-multiselect-item input { accent-color: var(--xiaomi-orange); cursor: pointer; }
+        .dash-chips-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; min-height: 0; }
+        .dash-chip {
+            display: flex; align-items: center; gap: 6px; background-color: #fff4e6; color: #b45400;
+            border: 1px solid #ffd8a8; padding: 3px 8px 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600;
+        }
+        .dash-chip button { background: none; border: none; cursor: pointer; color: #b45400; display: flex; padding: 0; }
+        .dash-chip button:hover { color: #e8590c; }
+
+        @media (max-width: 1024px) {
+            .dash-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .dash-row-2col { grid-template-columns: 1fr; }
+            .dash-kpi-grid { grid-template-columns: 1fr; }
+            .dash-multiselect { min-width: 0; width: 100%; }
+            .dash-multiselect-panel { left: 0; right: 0; width: auto; }
+        }
         .sidebar-overlay.active { display: block; }
 
         @media (max-width: 1200px) { .store-blocks-grid { grid-template-columns: 1fr; } }
@@ -414,17 +494,20 @@
     <div class="main-container">
         <nav class="navbar">
             <div class="nav-left">
-                <button class="btn-toggle-filters" id="btn-toggle-menu">
+                <button class="btn-toggle-filters inventario-only" id="btn-toggle-menu">
                     <i data-lucide="menu" style="width:16px; height:16px;"></i><span>Filtros</span>
                 </button>
-                
+
                 <div class="nav-tabs-pc" id="dynamic-tabs-pc">
-                    <div class="nav-tab active" data-tab="general" title="Vista General Corporativa">
+                    <div class="nav-tab" data-view="dashboard" title="Dashboard Ejecutivo">
+                        <i data-lucide="pie-chart"></i>
+                    </div>
+                    <div class="nav-tab active inventario-only" data-tab="general" title="Vista General Corporativa">
                         <i data-lucide="layout-dashboard"></i>
                     </div>
                 </div>
 
-                <div class="nav-tabs-mobile-container">
+                <div class="nav-tabs-mobile-container inventario-only">
                     <select class="nav-tabs-mobile-select" id="dynamic-tabs-mobile">
                         <option value="general">📊 General</option>
                     </select>
@@ -444,13 +527,13 @@
             </div>
         </nav>
 
-        <button class="mobile-collapse-toggle" id="btn-collapse-topbars" title="Ocultar/mostrar departamentos y búsqueda">
+        <button class="mobile-collapse-toggle inventario-only" id="btn-collapse-topbars" title="Ocultar/mostrar departamentos y búsqueda">
             <i data-lucide="chevron-up" style="width:14px; height:14px;"></i>
         </button>
 
-        <div class="mobile-tabs-strip" id="mobile-tabs-strip"></div>
+        <div class="mobile-tabs-strip inventario-only" id="mobile-tabs-strip"></div>
 
-        <div class="search-container-bar" id="search-container-bar">
+        <div class="search-container-bar inventario-only" id="search-container-bar">
             <div class="search-input-row">
                 <div class="search-icon-left">
                     <i data-lucide="search" style="width:18px; height:18px;"></i>
@@ -473,7 +556,7 @@
         </div>
 
         <main class="view-workspace">
-            <section class="kpi-grid">
+            <section class="kpi-grid inventario-only">
                 <div class="kpi-card">
                     <div class="kpi-info"><h3>Tienda (6)</h3><div class="kpi-value" id="kpi-tienda">0</div></div>
                     <div class="kpi-icon-wrapper"><i data-lucide="store" style="width:16px; height:16px;"></i></div>
@@ -492,7 +575,7 @@
                 </div>
             </section>
 
-            <section class="chart-card">
+            <section class="chart-card inventario-only">
                 <div class="chart-card-title" id="chart-dynamic-title">
                     <i data-lucide="align-left" style="width:14px; height:14px; color:var(--xiaomi-orange);"></i>
                     <span>Distribución Porcentual (Haz clic en un segmento para filtrar)</span>
@@ -500,7 +583,7 @@
                 <div class="chart-wrapper"><canvas id="canvas-stacked-bar"></canvas></div>
             </section>
 
-            <section class="store-blocks-grid">
+            <section class="store-blocks-grid inventario-only">
                 
                 <div class="table-container">
                     <div class="table-header header-tienda">
@@ -578,6 +661,77 @@
                     <div class="table-footer-summary" id="footer-exposicion"><div>0 tiendas</div><div>Total: 0 uds.</div></div>
                 </div>
 
+            </section>
+
+            <section class="dash-view" id="dashboard-view" style="display:none;">
+                <div class="dash-kpi-grid">
+                    <div class="dash-kpi-card">
+                        <div class="dash-kpi-icon" style="background:#e3faf2; color:#0ca678;"><i data-lucide="boxes"></i></div>
+                        <div class="dash-kpi-info">
+                            <h3>Stock Total</h3>
+                            <div class="dash-kpi-value" id="dash-kpi-total">0</div>
+                        </div>
+                    </div>
+                    <div class="dash-kpi-card">
+                        <div class="dash-kpi-icon" style="background:#edf2ff; color:#4c6ef5;"><i data-lucide="store"></i></div>
+                        <div class="dash-kpi-info">
+                            <h3>Tiendas con Stock</h3>
+                            <div class="dash-kpi-value" id="dash-kpi-stores">0</div>
+                        </div>
+                    </div>
+                    <div class="dash-kpi-card">
+                        <div class="dash-kpi-icon" style="background:#fff4e6; color:#ff922b;"><i data-lucide="package"></i></div>
+                        <div class="dash-kpi-info">
+                            <h3>Productos Activos</h3>
+                            <div class="dash-kpi-value" id="dash-kpi-products">0</div>
+                        </div>
+                    </div>
+                    <div class="dash-kpi-card">
+                        <div class="dash-kpi-icon" style="background:#f3f0ff; color:#7048e8;"><i data-lucide="layout-grid"></i></div>
+                        <div class="dash-kpi-info">
+                            <h3>Departamentos</h3>
+                            <div class="dash-kpi-value" id="dash-kpi-departments">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dash-row-2col">
+                    <div class="dash-card">
+                        <div class="dash-card-title"><i data-lucide="smartphone" style="width:15px;height:15px;color:var(--xiaomi-orange);"></i> Stock Telefonía (28) por Región</div>
+                        <div id="dash-chart-region-donut" class="dash-chart-holder"></div>
+                    </div>
+                    <div class="dash-card">
+                        <div class="dash-card-title"><i data-lucide="gem" style="width:15px;height:15px;color:var(--xiaomi-orange);"></i> Stock Telefonía (28) por Segmento GFK</div>
+                        <div id="dash-chart-gfk-donut" class="dash-chart-holder"></div>
+                    </div>
+                </div>
+
+                <div class="dash-card">
+                    <div class="dash-card-title-row">
+                        <div class="dash-card-title"><i data-lucide="bar-chart-3" style="width:15px;height:15px;color:var(--xiaomi-orange);"></i> Stock por Región</div>
+                        <div class="dash-multiselect" id="dash-product-multiselect">
+                            <button type="button" class="dash-multiselect-trigger" id="dash-product-trigger">
+                                <span id="dash-product-summary">Todos los productos</span>
+                                <i data-lucide="chevron-down" style="width:14px;height:14px;"></i>
+                            </button>
+                            <div class="dash-multiselect-panel" id="dash-product-panel">
+                                <input type="text" class="dash-multiselect-search" id="dash-product-search" placeholder="Buscar producto...">
+                                <div class="dash-multiselect-actions">
+                                    <button type="button" id="dash-select-all">Seleccionar todos</button>
+                                    <button type="button" id="dash-select-none">Quitar todos</button>
+                                </div>
+                                <div class="dash-multiselect-list" id="dash-product-list"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="dash-product-chips" class="dash-chips-row"></div>
+                    <div id="dash-chart-region-bar" class="dash-chart-holder dash-chart-tall"></div>
+                </div>
+
+                <div class="dash-card">
+                    <div class="dash-card-title"><i data-lucide="layout-grid" style="width:15px;height:15px;color:var(--xiaomi-orange);"></i> Stock por Departamento</div>
+                    <div id="dash-chart-department-bar" class="dash-chart-holder dash-chart-tall"></div>
+                </div>
             </section>
         </main>
     </div>
@@ -933,9 +1087,14 @@
             const pcContainer = document.getElementById('dynamic-tabs-pc');
             const mobileSelect = document.getElementById('dynamic-tabs-mobile');
             const mobileStrip = document.getElementById('mobile-tabs-strip');
-            // El "General" inicial también se replica en la tira móvil
+            // El icono de Dashboard va siempre primero (a la izquierda de
+            // "General"), y sigue visible aunque se cambie a la vista
+            // Dashboard — por eso NO lleva la clase "inventario-only".
             mobileStrip.innerHTML = `
-                <div class="nav-tab active" data-tab="general" title="Vista General Corporativa">
+                <div class="nav-tab" data-view="dashboard" title="Dashboard Ejecutivo">
+                    <i data-lucide="pie-chart"></i>
+                </div>
+                <div class="nav-tab active inventario-only" data-tab="general" title="Vista General Corporativa">
                     <i data-lucide="layout-dashboard"></i>
                 </div>`;
 
@@ -958,7 +1117,7 @@
 
         function createMenuElements(pcContainer, mobileSelect, mobileStrip, id, fullName, iconName) {
             const tab = document.createElement('div');
-            tab.className = 'nav-tab';
+            tab.className = 'nav-tab inventario-only';
             tab.setAttribute('data-tab', id);
             tab.setAttribute('title', `${id} - ${fullName}`);
             tab.innerHTML = `<i data-lucide="${iconName}"></i>`;
@@ -970,7 +1129,7 @@
             mobileSelect.appendChild(opt);
 
             const mobileTab = document.createElement('div');
-            mobileTab.className = 'nav-tab';
+            mobileTab.className = 'nav-tab inventario-only';
             mobileTab.setAttribute('data-tab', id);
             mobileTab.setAttribute('title', `${id} - ${fullName}`);
             mobileTab.innerHTML = `<i data-lucide="${iconName}"></i>`;
@@ -1129,6 +1288,8 @@
             document.getElementById('dynamic-tabs-pc').addEventListener('click', (e) => {
                 const tabEl = e.target.closest('.nav-tab');
                 if (!tabEl) return;
+                if (tabEl.dataset.view === 'dashboard') { setAppView('dashboard'); return; }
+                setAppView('inventario');
                 document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
                 document.querySelectorAll(`.nav-tab[data-tab="${tabEl.getAttribute('data-tab')}"]`).forEach(t => t.classList.add('active'));
 
@@ -1139,6 +1300,8 @@
             document.getElementById('mobile-tabs-strip').addEventListener('click', (e) => {
                 const tabEl = e.target.closest('.nav-tab');
                 if (!tabEl) return;
+                if (tabEl.dataset.view === 'dashboard') { setAppView('dashboard'); return; }
+                setAppView('inventario');
                 document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
                 document.querySelectorAll(`.nav-tab[data-tab="${tabEl.getAttribute('data-tab')}"]`).forEach(t => t.classList.add('active'));
 
@@ -1147,6 +1310,7 @@
             });
 
             document.getElementById('dynamic-tabs-mobile').addEventListener('change', (e) => {
+                setAppView('inventario');
                 document.querySelectorAll('.nav-tab').forEach(t => {
                     t.classList.remove('active');
                     if(t.getAttribute('data-tab') === e.target.value) t.classList.add('active');
@@ -1490,6 +1654,288 @@
                 `;
             });
         }
+
+        // ═══════════════════════════════════════════════════════════
+        // DASHBOARD EJECUTIVO — vista nueva, no interfiere con nada de
+        // lo anterior. Reutiliza el mismo "stockData" ya cargado en
+        // memoria (sin llamadas nuevas a Apps Script) y genera todos los
+        // gráficos en el propio navegador con ApexCharts.
+        // ═══════════════════════════════════════════════════════════
+        let currentView = 'inventario';
+        let dashSelectedProducts = new Set(); // vacío = "todos los productos"
+        let dashCharts = {}; // instancias ApexCharts vivas, para poder destruirlas/actualizarlas
+        const DASH_PALETTE = ['#FF6700', '#104A60', '#0ca678', '#4c6ef5', '#7048e8', '#e03131', '#f59f00', '#099268', '#ae3ec9', '#1c7ed6', '#2b8a3e', '#343a40'];
+
+        function setAppView(view) {
+            currentView = view;
+            document.body.classList.toggle('dashboard-active', view === 'dashboard');
+
+            document.querySelectorAll('.inventario-only').forEach(el => {
+                el.style.display = (view === 'dashboard') ? 'none' : '';
+            });
+            document.getElementById('dashboard-view').style.display = (view === 'dashboard') ? 'flex' : 'none';
+
+            document.querySelectorAll('.nav-tab[data-view="dashboard"]').forEach(t => {
+                t.classList.toggle('active', view === 'dashboard');
+            });
+
+            if (view === 'dashboard') {
+                renderExecutiveDashboard();
+            }
+        }
+
+        // Punto de entrada: (re)pinta los 4 gráficos y los KPIs a partir
+        // de stockData actual. Se puede llamar varias veces (por ejemplo,
+        // si stockData se actualiza en segundo plano mientras el usuario
+        // está en esta vista) — destruye y recrea los gráficos ApexCharts
+        // de forma segura.
+        function renderExecutiveDashboard() {
+            renderDashKpis();
+            renderDashRegionDonut();
+            renderDashGfkDonut();
+            populateDashProductList();
+            renderDashRegionBar();
+            renderDashDepartmentBar();
+        }
+
+        function renderDashKpis() {
+            const totalStock = stockData.reduce((a, c) => a + c.Cantidad, 0);
+            const stores = new Set(stockData.map(r => r.StoreName));
+            const products = new Set(stockData.map(r => r.Modelo));
+            const departments = new Set(stockData.map(r => cleanFamilyId(r.Familia)).filter(Boolean));
+
+            document.getElementById('dash-kpi-total').textContent = totalStock.toLocaleString();
+            document.getElementById('dash-kpi-stores').textContent = stores.size.toLocaleString();
+            document.getElementById('dash-kpi-products').textContent = products.size.toLocaleString();
+            document.getElementById('dash-kpi-departments').textContent = departments.size.toLocaleString();
+        }
+
+        // Destruye un gráfico ApexCharts previo si existía, para poder
+        // repintar sin duplicar instancias ni perder memoria.
+        function destroyDashChart(key) {
+            if (dashCharts[key]) {
+                try { dashCharts[key].destroy(); } catch (e) {}
+                delete dashCharts[key];
+            }
+        }
+
+        function renderDashRegionDonut() {
+            const rowsTelefonia = stockData.filter(r => cleanFamilyId(r.Familia) === '28');
+            const groups = {};
+            rowsTelefonia.forEach(r => { groups[r.Region] = (groups[r.Region] || 0) + r.Cantidad; });
+
+            const labels = Object.keys(groups);
+            const series = labels.map(l => groups[l]);
+
+            destroyDashChart('regionDonut');
+            const el = document.getElementById('dash-chart-region-donut');
+            if (labels.length === 0) { el.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:40px 0;font-size:0.85rem;">Sin stock de Telefonía (28) con los datos actuales.</p>'; return; }
+            el.innerHTML = '';
+
+            dashCharts.regionDonut = new ApexCharts(el, {
+                chart: { type: 'donut', height: 300, animations: { enabled: true, speed: 400 }, toolbar: { show: true, tools: { download: true } } },
+                series: series,
+                labels: labels,
+                colors: DASH_PALETTE,
+                dataLabels: { formatter: (val) => val.toFixed(1) + '%' },
+                legend: { position: 'bottom', fontSize: '11px' },
+                tooltip: {
+                    y: {
+                        formatter: (val, opts) => {
+                            const total = series.reduce((a, b) => a + b, 0);
+                            const pct = total ? ((val / total) * 100).toFixed(1) : 0;
+                            return `${val.toLocaleString()} uds. (${pct}%)`;
+                        }
+                    }
+                },
+                plotOptions: { pie: { donut: { labels: { show: true, total: { show: true, label: 'Total', formatter: () => series.reduce((a,b) => a+b, 0).toLocaleString() } } } } }
+            });
+            dashCharts.regionDonut.render();
+        }
+
+        function renderDashGfkDonut() {
+            const rowsTelefonia = stockData.filter(r => cleanFamilyId(r.Familia) === '28');
+            const groups = {};
+            rowsTelefonia.forEach(r => {
+                const key = r.SegmentoGFK || 'N/A';
+                groups[key] = (groups[key] || 0) + r.Cantidad;
+            });
+
+            const labels = Object.keys(groups);
+            const series = labels.map(l => groups[l]);
+
+            destroyDashChart('gfkDonut');
+            const el = document.getElementById('dash-chart-gfk-donut');
+            if (labels.length === 0) { el.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:40px 0;font-size:0.85rem;">Sin stock de Telefonía (28) con los datos actuales.</p>'; return; }
+            el.innerHTML = '';
+
+            dashCharts.gfkDonut = new ApexCharts(el, {
+                chart: { type: 'donut', height: 300, animations: { enabled: true, speed: 400 }, toolbar: { show: true, tools: { download: true } } },
+                series: series,
+                labels: labels,
+                colors: DASH_PALETTE,
+                dataLabels: { formatter: (val) => val.toFixed(1) + '%' },
+                legend: { position: 'bottom', fontSize: '11px' },
+                tooltip: {
+                    y: {
+                        formatter: (val) => {
+                            const total = series.reduce((a, b) => a + b, 0);
+                            const pct = total ? ((val / total) * 100).toFixed(1) : 0;
+                            return `${val.toLocaleString()} uds. (${pct}%)`;
+                        }
+                    }
+                },
+                plotOptions: { pie: { donut: { labels: { show: true, total: { show: true, label: 'Total', formatter: () => series.reduce((a,b) => a+b, 0).toLocaleString() } } } } }
+            });
+            dashCharts.gfkDonut.render();
+        }
+
+        function renderDashRegionBar() {
+            const rowsFiltradas = dashSelectedProducts.size === 0
+                ? stockData
+                : stockData.filter(r => dashSelectedProducts.has(r.Modelo));
+
+            const groups = {};
+            rowsFiltradas.forEach(r => { groups[r.Region] = (groups[r.Region] || 0) + r.Cantidad; });
+            const labels = Object.keys(groups).sort();
+            const series = labels.map(l => groups[l]);
+
+            destroyDashChart('regionBar');
+            const el = document.getElementById('dash-chart-region-bar');
+            if (labels.length === 0) { el.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:40px 0;font-size:0.85rem;">Sin datos para la selección actual.</p>'; return; }
+            el.innerHTML = '';
+
+            dashCharts.regionBar = new ApexCharts(el, {
+                chart: { type: 'bar', height: 340, animations: { enabled: true, speed: 400 }, toolbar: { show: true, tools: { download: true } } },
+                series: [{ name: 'Stock', data: series }],
+                xaxis: { categories: labels, labels: { style: { fontSize: '11px' } } },
+                colors: [getComputedStyle(document.documentElement).getPropertyValue('--xiaomi-orange').trim() || '#FF6700'],
+                dataLabels: { enabled: true, offsetY: -20, style: { fontSize: '11px', colors: ['#495057'] }, formatter: (val) => val.toLocaleString() },
+                tooltip: { y: { formatter: (val) => val.toLocaleString() + ' uds.' } },
+                plotOptions: { bar: { borderRadius: 6, columnWidth: '55%' } },
+                grid: { borderColor: '#f1f3f5' }
+            });
+            dashCharts.regionBar.render();
+        }
+
+        function renderDashDepartmentBar() {
+            const groups = {};
+            stockData.forEach(r => {
+                const id = cleanFamilyId(r.Familia);
+                if (!id) return;
+                groups[id] = (groups[id] || 0) + r.Cantidad;
+            });
+
+            const cfgById = {};
+            definedMenuConfig.forEach(c => { cfgById[c.id] = c.name; });
+
+            const entries = Object.entries(groups)
+                .map(([id, total]) => ({ label: `${id} - ${cfgById[id] || 'Familia ' + id}`, total }))
+                .sort((a, b) => b.total - a.total);
+
+            destroyDashChart('deptBar');
+            const el = document.getElementById('dash-chart-department-bar');
+            if (entries.length === 0) { el.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:40px 0;font-size:0.85rem;">Sin datos disponibles.</p>'; return; }
+            el.innerHTML = '';
+
+            const totalGeneral = entries.reduce((a, c) => a + c.total, 0);
+
+            dashCharts.deptBar = new ApexCharts(el, {
+                chart: { type: 'bar', height: Math.max(340, entries.length * 34), animations: { enabled: true, speed: 400 }, toolbar: { show: true, tools: { download: true } } },
+                series: [{ name: 'Stock', data: entries.map(e => e.total) }],
+                xaxis: { categories: entries.map(e => e.label), labels: { style: { fontSize: '11px' } } },
+                colors: [getComputedStyle(document.documentElement).getPropertyValue('--salesland-blue').trim() || '#104A60'],
+                dataLabels: {
+                    enabled: true, style: { fontSize: '11px', colors: ['#495057'] },
+                    formatter: (val) => `${val.toLocaleString()} (${totalGeneral ? ((val/totalGeneral)*100).toFixed(1) : 0}%)`
+                },
+                tooltip: { y: { formatter: (val) => `${val.toLocaleString()} uds. (${totalGeneral ? ((val/totalGeneral)*100).toFixed(1) : 0}%)` } },
+                plotOptions: { bar: { horizontal: true, borderRadius: 6, barHeight: '65%' } },
+                grid: { borderColor: '#f1f3f5' }
+            });
+            dashCharts.deptBar.render();
+        }
+
+        // ── Multiselect de productos (Gráfico 3) ──
+        function populateDashProductList() {
+            const listEl = document.getElementById('dash-product-list');
+            const searchTerm = (document.getElementById('dash-product-search').value || '').toLowerCase();
+            const allProducts = [...new Set(stockData.map(r => r.Modelo))].filter(Boolean).sort();
+
+            listEl.innerHTML = '';
+            allProducts
+                .filter(p => p.toLowerCase().includes(searchTerm))
+                .forEach(p => {
+                    const item = document.createElement('label');
+                    item.className = 'dash-multiselect-item';
+                    const isChecked = dashSelectedProducts.has(p);
+                    item.innerHTML = `<input type="checkbox" value="${p}" ${isChecked ? 'checked' : ''}><span>${p}</span>`;
+                    item.querySelector('input').addEventListener('change', (e) => {
+                        if (e.target.checked) dashSelectedProducts.add(p);
+                        else dashSelectedProducts.delete(p);
+                        updateDashProductSummary();
+                        renderDashRegionBar();
+                    });
+                    listEl.appendChild(item);
+                });
+
+            updateDashProductSummary();
+        }
+
+        function updateDashProductSummary() {
+            const summaryEl = document.getElementById('dash-product-summary');
+            const chipsEl = document.getElementById('dash-product-chips');
+
+            if (dashSelectedProducts.size === 0) {
+                summaryEl.textContent = 'Todos los productos';
+                chipsEl.innerHTML = '';
+                return;
+            }
+
+            summaryEl.textContent = `${dashSelectedProducts.size} seleccionado${dashSelectedProducts.size > 1 ? 's' : ''}`;
+
+            chipsEl.innerHTML = '';
+            [...dashSelectedProducts].forEach(p => {
+                const chip = document.createElement('div');
+                chip.className = 'dash-chip';
+                chip.innerHTML = `<span>${p}</span>`;
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.innerHTML = '<i data-lucide="x" style="width:11px;height:11px;"></i>';
+                removeBtn.addEventListener('click', () => {
+                    dashSelectedProducts.delete(p);
+                    populateDashProductList();
+                    renderDashRegionBar();
+                });
+                chip.appendChild(removeBtn);
+                chipsEl.appendChild(chip);
+            });
+            lucide.createIcons();
+        }
+
+        // Listeners del multiselect — se registran una sola vez, ya que
+        // estos elementos existen desde el primer momento en el HTML
+        // (no se recrean como las pestañas de departamento).
+        document.getElementById('dash-product-trigger').addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('dash-product-panel').classList.toggle('show');
+        });
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#dash-product-multiselect')) {
+                document.getElementById('dash-product-panel').classList.remove('show');
+            }
+        });
+        document.getElementById('dash-product-search').addEventListener('input', populateDashProductList);
+        document.getElementById('dash-select-all').addEventListener('click', () => {
+            dashSelectedProducts = new Set(stockData.map(r => r.Modelo).filter(Boolean));
+            populateDashProductList();
+            renderDashRegionBar();
+        });
+        document.getElementById('dash-select-none').addEventListener('click', () => {
+            dashSelectedProducts = new Set();
+            populateDashProductList();
+            renderDashRegionBar();
+        });
     </script>
 
     <script>

@@ -33,6 +33,48 @@ una URL de script.google.com**.
 
 He verificado que `npm run build` termina sin errores con estos cambios.
 
+## 📊 Dashboard Ejecutivo (nueva vista, no rompe nada de lo existente)
+
+Se ha añadido un icono **📊 Dashboard** a la izquierda de "General" en la
+fila de pestañas (mismo formato que el resto de iconos de departamento).
+Al pulsarlo se abre una vista nueva, totalmente separada de la de
+Inventario, con:
+
+- **4 tarjetas KPI**: Stock Total, Tiendas con Stock, Productos Activos,
+  Departamentos.
+- **2 gráficos donut** (Telefonía · departamento 28): stock por Región y
+  stock por Segmento GFK.
+- **1 gráfico de barras** de stock por Región, con un **filtro
+  multiselección de productos** encima (buscador, seleccionar
+  todos/ninguno, chips eliminables).
+- **1 gráfico de barras horizontales** de stock por Departamento,
+  ordenado de mayor a menor, con % y unidades.
+
+Todos los gráficos son de **ApexCharts** (vía CDN), con animaciones,
+tooltips, y un botón de exportar a PNG integrado en cada gráfico (icono
+de descarga en su esquina). Son responsive: 2 columnas en escritorio, 1
+columna en móvil.
+
+**Rendimiento**: el Dashboard **no hace ninguna llamada nueva** a Apps
+Script — reutiliza el mismo `stockData` que ya está en memoria desde el
+login (o desde la caché instantánea de `localStorage`). Cambiar entre
+Inventario y Dashboard es instantáneo.
+
+**Cómo está integrado, sin tocar lo anterior**: la vista de Inventario
+(KPIs, gráfico apilado, tablas por almacén, sidebar de filtros, barra de
+búsqueda, tira de departamentos) se marcó con una clase `inventario-only`
+que se oculta/muestra por JavaScript al cambiar de vista — nada de esa
+lógica se ha modificado, solo se oculta temporalmente. El propio icono
+de Dashboard vive dentro de la misma fila de pestañas de siempre
+(`dynamic-tabs-pc` / `mobile-tabs-strip`), pero no participa en el
+sistema de filtrado por departamento: tiene su propio atributo
+`data-view="dashboard"` que el código distingue del resto.
+
+Una vez entras en el Dashboard, la fila superior sigue mostrando el
+Dashboard (visible siempre) y el resto de pestañas de departamento;
+haz clic en cualquier pestaña de departamento o en "General" para volver
+a Inventario.
+
 ## ⚡ Optimizaciones de rendimiento aplicadas
 
 - **Una sola llamada al backend en el login (`initialize`)**: antes el
