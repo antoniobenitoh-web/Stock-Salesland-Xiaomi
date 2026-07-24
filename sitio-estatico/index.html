@@ -502,7 +502,7 @@
                     <div class="nav-tab" data-view="dashboard" title="Dashboard Ejecutivo">
                         <i data-lucide="pie-chart"></i>
                     </div>
-                    <div class="nav-tab active inventario-only" data-tab="general" title="Vista General Corporativa">
+                    <div class="nav-tab active" data-tab="general" title="Vista General Corporativa">
                         <i data-lucide="layout-dashboard"></i>
                     </div>
                 </div>
@@ -531,7 +531,7 @@
             <i data-lucide="chevron-up" style="width:14px; height:14px;"></i>
         </button>
 
-        <div class="mobile-tabs-strip inventario-only" id="mobile-tabs-strip"></div>
+        <div class="mobile-tabs-strip" id="mobile-tabs-strip"></div>
 
         <div class="search-container-bar inventario-only" id="search-container-bar">
             <div class="search-input-row">
@@ -697,18 +697,52 @@
 
                 <div class="dash-row-2col">
                     <div class="dash-card">
-                        <div class="dash-card-title"><i data-lucide="smartphone" style="width:15px;height:15px;color:var(--xiaomi-orange);"></i> Stock Telefonía (28) por Región</div>
+                        <div class="dash-card-title-row">
+                            <div class="dash-card-title"><i data-lucide="smartphone" style="width:15px;height:15px;color:var(--xiaomi-orange);"></i> Global Stock por Región</div>
+                            <div class="dash-multiselect" id="dash-dept-region-multiselect">
+                                <button type="button" class="dash-multiselect-trigger" id="dash-dept-region-trigger">
+                                    <span id="dash-dept-region-summary">Todos</span>
+                                    <i data-lucide="chevron-down" style="width:14px;height:14px;"></i>
+                                </button>
+                                <div class="dash-multiselect-panel" id="dash-dept-region-panel">
+                                    <input type="text" class="dash-multiselect-search" id="dash-dept-region-search" placeholder="Buscar departamento...">
+                                    <div class="dash-multiselect-actions">
+                                        <button type="button" id="dash-dept-region-select-all">Seleccionar todos</button>
+                                        <button type="button" id="dash-dept-region-select-none">Quitar todos</button>
+                                    </div>
+                                    <div class="dash-multiselect-list" id="dash-dept-region-list"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="dash-dept-region-chips" class="dash-chips-row"></div>
                         <div id="dash-chart-region-donut" class="dash-chart-holder"></div>
                     </div>
                     <div class="dash-card">
-                        <div class="dash-card-title"><i data-lucide="gem" style="width:15px;height:15px;color:var(--xiaomi-orange);"></i> Stock Telefonía (28) por Segmento GFK</div>
+                        <div class="dash-card-title-row">
+                            <div class="dash-card-title"><i data-lucide="gem" style="width:15px;height:15px;color:var(--xiaomi-orange);"></i> Stock Telefonía (28) por Segmento GFK</div>
+                            <div class="dash-multiselect" id="dash-region-gfk-multiselect">
+                                <button type="button" class="dash-multiselect-trigger" id="dash-region-gfk-trigger">
+                                    <span id="dash-region-gfk-summary">Todas</span>
+                                    <i data-lucide="chevron-down" style="width:14px;height:14px;"></i>
+                                </button>
+                                <div class="dash-multiselect-panel" id="dash-region-gfk-panel">
+                                    <input type="text" class="dash-multiselect-search" id="dash-region-gfk-search" placeholder="Buscar región...">
+                                    <div class="dash-multiselect-actions">
+                                        <button type="button" id="dash-region-gfk-select-all">Seleccionar todas</button>
+                                        <button type="button" id="dash-region-gfk-select-none">Quitar todas</button>
+                                    </div>
+                                    <div class="dash-multiselect-list" id="dash-region-gfk-list"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="dash-region-gfk-chips" class="dash-chips-row"></div>
                         <div id="dash-chart-gfk-donut" class="dash-chart-holder"></div>
                     </div>
                 </div>
 
                 <div class="dash-card">
                     <div class="dash-card-title-row">
-                        <div class="dash-card-title"><i data-lucide="bar-chart-3" style="width:15px;height:15px;color:var(--xiaomi-orange);"></i> Stock por Región</div>
+                        <div class="dash-card-title"><i data-lucide="bar-chart-3" style="width:15px;height:15px;color:var(--xiaomi-orange);"></i> Detalle Stock por Región</div>
                         <div class="dash-multiselect" id="dash-product-multiselect">
                             <button type="button" class="dash-multiselect-trigger" id="dash-product-trigger">
                                 <span id="dash-product-summary">Todos los productos</span>
@@ -717,8 +751,8 @@
                             <div class="dash-multiselect-panel" id="dash-product-panel">
                                 <input type="text" class="dash-multiselect-search" id="dash-product-search" placeholder="Buscar producto...">
                                 <div class="dash-multiselect-actions">
-                                    <button type="button" id="dash-select-all">Seleccionar todos</button>
-                                    <button type="button" id="dash-select-none">Quitar todos</button>
+                                    <button type="button" id="dash-product-select-all">Seleccionar todos</button>
+                                    <button type="button" id="dash-product-select-none">Quitar todos</button>
                                 </div>
                                 <div class="dash-multiselect-list" id="dash-product-list"></div>
                             </div>
@@ -729,7 +763,24 @@
                 </div>
 
                 <div class="dash-card">
-                    <div class="dash-card-title"><i data-lucide="layout-grid" style="width:15px;height:15px;color:var(--xiaomi-orange);"></i> Stock por Departamento</div>
+                    <div class="dash-card-title-row">
+                        <div class="dash-card-title"><i data-lucide="layout-grid" style="width:15px;height:15px;color:var(--xiaomi-orange);"></i> Stock por Departamento</div>
+                        <div class="dash-multiselect" id="dash-region-dept-multiselect">
+                            <button type="button" class="dash-multiselect-trigger" id="dash-region-dept-trigger">
+                                <span id="dash-region-dept-summary">Todas las regiones</span>
+                                <i data-lucide="chevron-down" style="width:14px;height:14px;"></i>
+                            </button>
+                            <div class="dash-multiselect-panel" id="dash-region-dept-panel">
+                                <input type="text" class="dash-multiselect-search" id="dash-region-dept-search" placeholder="Buscar región...">
+                                <div class="dash-multiselect-actions">
+                                    <button type="button" id="dash-region-dept-select-all">Seleccionar todas</button>
+                                    <button type="button" id="dash-region-dept-select-none">Quitar todas</button>
+                                </div>
+                                <div class="dash-multiselect-list" id="dash-region-dept-list"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="dash-region-dept-chips" class="dash-chips-row"></div>
                     <div id="dash-chart-department-bar" class="dash-chart-holder dash-chart-tall"></div>
                 </div>
             </section>
@@ -1094,7 +1145,7 @@
                 <div class="nav-tab" data-view="dashboard" title="Dashboard Ejecutivo">
                     <i data-lucide="pie-chart"></i>
                 </div>
-                <div class="nav-tab active inventario-only" data-tab="general" title="Vista General Corporativa">
+                <div class="nav-tab active" data-tab="general" title="Vista General Corporativa">
                     <i data-lucide="layout-dashboard"></i>
                 </div>`;
 
@@ -1117,7 +1168,7 @@
 
         function createMenuElements(pcContainer, mobileSelect, mobileStrip, id, fullName, iconName) {
             const tab = document.createElement('div');
-            tab.className = 'nav-tab inventario-only';
+            tab.className = 'nav-tab';
             tab.setAttribute('data-tab', id);
             tab.setAttribute('title', `${id} - ${fullName}`);
             tab.innerHTML = `<i data-lucide="${iconName}"></i>`;
@@ -1129,7 +1180,7 @@
             mobileSelect.appendChild(opt);
 
             const mobileTab = document.createElement('div');
-            mobileTab.className = 'nav-tab inventario-only';
+            mobileTab.className = 'nav-tab';
             mobileTab.setAttribute('data-tab', id);
             mobileTab.setAttribute('title', `${id} - ${fullName}`);
             mobileTab.innerHTML = `<i data-lucide="${iconName}"></i>`;
@@ -1662,7 +1713,6 @@
         // gráficos en el propio navegador con ApexCharts.
         // ═══════════════════════════════════════════════════════════
         let currentView = 'inventario';
-        let dashSelectedProducts = new Set(); // vacío = "todos los productos"
         let dashCharts = {}; // instancias ApexCharts vivas, para poder destruirlas/actualizarlas
         const DASH_PALETTE = ['#FF6700', '#104A60', '#0ca678', '#4c6ef5', '#7048e8', '#e03131', '#f59f00', '#099268', '#ae3ec9', '#1c7ed6', '#2b8a3e', '#343a40'];
 
@@ -1674,6 +1724,17 @@
                 el.style.display = (view === 'dashboard') ? 'none' : '';
             });
             document.getElementById('dashboard-view').style.display = (view === 'dashboard') ? 'flex' : 'none';
+
+            // Por si el usuario había plegado la tira de departamentos
+            // antes de entrar al Dashboard: la desplegamos siempre al
+            // entrar, para que el icono de Dashboard (y el resto de
+            // pestañas para poder volver) nunca queden escondidos.
+            if (view === 'dashboard') {
+                document.getElementById('mobile-tabs-strip').classList.remove('collapsed');
+                document.getElementById('search-container-bar').classList.remove('collapsed');
+                const collapseIcon = document.querySelector('#btn-collapse-topbars i');
+                if (collapseIcon) { collapseIcon.setAttribute('data-lucide', 'chevron-up'); lucide.createIcons(); }
+            }
 
             document.querySelectorAll('.nav-tab[data-view="dashboard"]').forEach(t => {
                 t.classList.toggle('active', view === 'dashboard');
@@ -1691,9 +1752,12 @@
         // de forma segura.
         function renderExecutiveDashboard() {
             renderDashKpis();
+            dashFilterDeptRegion.populate();
+            dashFilterRegionGfk.populate();
+            dashFilterProduct.populate();
+            dashFilterRegionDept.populate();
             renderDashRegionDonut();
             renderDashGfkDonut();
-            populateDashProductList();
             renderDashRegionBar();
             renderDashDepartmentBar();
         }
@@ -1719,17 +1783,35 @@
             }
         }
 
+        function friendlyDeptLabel(id) {
+            const cfg = definedMenuConfig.find(c => c.id === id);
+            return cfg ? `${id} - ${cfg.name}` : `${id} - Familia ${id}`;
+        }
+
+        function donutTooltipFormatter(series) {
+            return (val) => {
+                const total = series.reduce((a, b) => a + b, 0);
+                const pct = total ? ((val / total) * 100).toFixed(1) : 0;
+                return `${val.toLocaleString()} uds. (${pct}%)`;
+            };
+        }
+
+        // ── Gráfico 1: Global Stock por Región (filtrable por departamento) ──
         function renderDashRegionDonut() {
-            const rowsTelefonia = stockData.filter(r => cleanFamilyId(r.Familia) === '28');
+            const selectedDepts = dashFilterDeptRegion.getState();
+            const rows = selectedDepts.size === 0
+                ? stockData
+                : stockData.filter(r => selectedDepts.has(cleanFamilyId(r.Familia)));
+
             const groups = {};
-            rowsTelefonia.forEach(r => { groups[r.Region] = (groups[r.Region] || 0) + r.Cantidad; });
+            rows.forEach(r => { groups[r.Region] = (groups[r.Region] || 0) + r.Cantidad; });
 
             const labels = Object.keys(groups);
             const series = labels.map(l => groups[l]);
 
             destroyDashChart('regionDonut');
             const el = document.getElementById('dash-chart-region-donut');
-            if (labels.length === 0) { el.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:40px 0;font-size:0.85rem;">Sin stock de Telefonía (28) con los datos actuales.</p>'; return; }
+            if (labels.length === 0) { el.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:40px 0;font-size:0.85rem;">Sin datos para la selección actual.</p>'; return; }
             el.innerHTML = '';
 
             dashCharts.regionDonut = new ApexCharts(el, {
@@ -1739,24 +1821,20 @@
                 colors: DASH_PALETTE,
                 dataLabels: { formatter: (val) => val.toFixed(1) + '%' },
                 legend: { position: 'bottom', fontSize: '11px' },
-                tooltip: {
-                    y: {
-                        formatter: (val, opts) => {
-                            const total = series.reduce((a, b) => a + b, 0);
-                            const pct = total ? ((val / total) * 100).toFixed(1) : 0;
-                            return `${val.toLocaleString()} uds. (${pct}%)`;
-                        }
-                    }
-                },
+                tooltip: { y: { formatter: donutTooltipFormatter(series) } },
                 plotOptions: { pie: { donut: { labels: { show: true, total: { show: true, label: 'Total', formatter: () => series.reduce((a,b) => a+b, 0).toLocaleString() } } } } }
             });
             dashCharts.regionDonut.render();
         }
 
+        // ── Gráfico 2: Stock Telefonía (28) por Segmento GFK (filtrable por región) ──
         function renderDashGfkDonut() {
-            const rowsTelefonia = stockData.filter(r => cleanFamilyId(r.Familia) === '28');
+            const selectedRegions = dashFilterRegionGfk.getState();
+            let rows = stockData.filter(r => cleanFamilyId(r.Familia) === '28');
+            if (selectedRegions.size > 0) rows = rows.filter(r => selectedRegions.has(r.Region));
+
             const groups = {};
-            rowsTelefonia.forEach(r => {
+            rows.forEach(r => {
                 const key = r.SegmentoGFK || 'N/A';
                 groups[key] = (groups[key] || 0) + r.Cantidad;
             });
@@ -1766,7 +1844,7 @@
 
             destroyDashChart('gfkDonut');
             const el = document.getElementById('dash-chart-gfk-donut');
-            if (labels.length === 0) { el.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:40px 0;font-size:0.85rem;">Sin stock de Telefonía (28) con los datos actuales.</p>'; return; }
+            if (labels.length === 0) { el.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:40px 0;font-size:0.85rem;">Sin datos para la selección actual.</p>'; return; }
             el.innerHTML = '';
 
             dashCharts.gfkDonut = new ApexCharts(el, {
@@ -1776,29 +1854,27 @@
                 colors: DASH_PALETTE,
                 dataLabels: { formatter: (val) => val.toFixed(1) + '%' },
                 legend: { position: 'bottom', fontSize: '11px' },
-                tooltip: {
-                    y: {
-                        formatter: (val) => {
-                            const total = series.reduce((a, b) => a + b, 0);
-                            const pct = total ? ((val / total) * 100).toFixed(1) : 0;
-                            return `${val.toLocaleString()} uds. (${pct}%)`;
-                        }
-                    }
-                },
+                tooltip: { y: { formatter: donutTooltipFormatter(series) } },
                 plotOptions: { pie: { donut: { labels: { show: true, total: { show: true, label: 'Total', formatter: () => series.reduce((a,b) => a+b, 0).toLocaleString() } } } } }
             });
             dashCharts.gfkDonut.render();
         }
 
+        // ── Gráfico 3: Detalle Stock por Región (filtrable por producto) ──
+        // NOTA: se usa SIEMPRE horizontal (aunque haya sitio de sobra en
+        // escritorio) porque en vertical las etiquetas de datos se veían
+        // mal en móvil; en horizontal se leen bien en cualquier tamaño.
         function renderDashRegionBar() {
-            const rowsFiltradas = dashSelectedProducts.size === 0
+            const selectedProducts = dashFilterProduct.getState();
+            const rows = selectedProducts.size === 0
                 ? stockData
-                : stockData.filter(r => dashSelectedProducts.has(r.Modelo));
+                : stockData.filter(r => selectedProducts.has(r.Modelo));
 
             const groups = {};
-            rowsFiltradas.forEach(r => { groups[r.Region] = (groups[r.Region] || 0) + r.Cantidad; });
+            rows.forEach(r => { groups[r.Region] = (groups[r.Region] || 0) + r.Cantidad; });
             const labels = Object.keys(groups).sort();
             const series = labels.map(l => groups[l]);
+            const total = series.reduce((a, b) => a + b, 0);
 
             destroyDashChart('regionBar');
             const el = document.getElementById('dash-chart-region-bar');
@@ -1806,47 +1882,63 @@
             el.innerHTML = '';
 
             dashCharts.regionBar = new ApexCharts(el, {
-                chart: { type: 'bar', height: 340, animations: { enabled: true, speed: 400 }, toolbar: { show: true, tools: { download: true } } },
+                chart: { type: 'bar', height: Math.max(320, labels.length * 42), animations: { enabled: true, speed: 400 }, toolbar: { show: true, tools: { download: true } } },
                 series: [{ name: 'Stock', data: series }],
                 xaxis: { categories: labels, labels: { style: { fontSize: '11px' } } },
                 colors: [getComputedStyle(document.documentElement).getPropertyValue('--xiaomi-orange').trim() || '#FF6700'],
-                dataLabels: { enabled: true, offsetY: -20, style: { fontSize: '11px', colors: ['#495057'] }, formatter: (val) => val.toLocaleString() },
-                tooltip: { y: { formatter: (val) => val.toLocaleString() + ' uds.' } },
-                plotOptions: { bar: { borderRadius: 6, columnWidth: '55%' } },
+                dataLabels: {
+                    enabled: true,
+                    textAnchor: 'start',
+                    offsetX: 8,
+                    style: { fontSize: '11px', colors: ['#212529'] },
+                    formatter: (val) => `${val.toLocaleString()} (${total ? ((val/total)*100).toFixed(1) : 0}%)`
+                },
+                tooltip: { y: { formatter: (val) => `${val.toLocaleString()} uds. (${total ? ((val/total)*100).toFixed(1) : 0}%)` } },
+                plotOptions: { bar: { horizontal: true, borderRadius: 6, barHeight: '60%' } },
                 grid: { borderColor: '#f1f3f5' }
             });
             dashCharts.regionBar.render();
         }
 
+        // ── Gráfico 4: Stock por Departamento (filtrable por región) ──
         function renderDashDepartmentBar() {
+            const selectedRegions = dashFilterRegionDept.getState();
+            const rows = selectedRegions.size === 0
+                ? stockData
+                : stockData.filter(r => selectedRegions.has(r.Region));
+
             const groups = {};
-            stockData.forEach(r => {
+            rows.forEach(r => {
                 const id = cleanFamilyId(r.Familia);
                 if (!id) return;
                 groups[id] = (groups[id] || 0) + r.Cantidad;
             });
 
-            const cfgById = {};
-            definedMenuConfig.forEach(c => { cfgById[c.id] = c.name; });
-
             const entries = Object.entries(groups)
-                .map(([id, total]) => ({ label: `${id} - ${cfgById[id] || 'Familia ' + id}`, total }))
+                .map(([id, total]) => ({ label: friendlyDeptLabel(id), total }))
                 .sort((a, b) => b.total - a.total);
 
             destroyDashChart('deptBar');
             const el = document.getElementById('dash-chart-department-bar');
-            if (entries.length === 0) { el.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:40px 0;font-size:0.85rem;">Sin datos disponibles.</p>'; return; }
+            if (entries.length === 0) { el.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:40px 0;font-size:0.85rem;">Sin datos para la selección actual.</p>'; return; }
             el.innerHTML = '';
 
             const totalGeneral = entries.reduce((a, c) => a + c.total, 0);
 
             dashCharts.deptBar = new ApexCharts(el, {
-                chart: { type: 'bar', height: Math.max(340, entries.length * 34), animations: { enabled: true, speed: 400 }, toolbar: { show: true, tools: { download: true } } },
+                chart: { type: 'bar', height: Math.max(340, entries.length * 38), animations: { enabled: true, speed: 400 }, toolbar: { show: true, tools: { download: true } } },
                 series: [{ name: 'Stock', data: entries.map(e => e.total) }],
                 xaxis: { categories: entries.map(e => e.label), labels: { style: { fontSize: '11px' } } },
                 colors: [getComputedStyle(document.documentElement).getPropertyValue('--salesland-blue').trim() || '#104A60'],
                 dataLabels: {
-                    enabled: true, style: { fontSize: '11px', colors: ['#495057'] },
+                    // "textAnchor:start" + offsetX positivo pone la
+                    // etiqueta justo DESPUÉS de la barra (fuera de ella)
+                    // en vez de centrada encima — así nunca queda un
+                    // texto oscuro ilegible sobre una barra oscura.
+                    enabled: true,
+                    textAnchor: 'start',
+                    offsetX: 8,
+                    style: { fontSize: '11px', colors: ['#212529'] },
                     formatter: (val) => `${val.toLocaleString()} (${totalGeneral ? ((val/totalGeneral)*100).toFixed(1) : 0}%)`
                 },
                 tooltip: { y: { formatter: (val) => `${val.toLocaleString()} uds. (${totalGeneral ? ((val/totalGeneral)*100).toFixed(1) : 0}%)` } },
@@ -1856,87 +1948,147 @@
             dashCharts.deptBar.render();
         }
 
-        // ── Multiselect de productos (Gráfico 3) ──
-        function populateDashProductList() {
-            const listEl = document.getElementById('dash-product-list');
-            const searchTerm = (document.getElementById('dash-product-search').value || '').toLowerCase();
-            const allProducts = [...new Set(stockData.map(r => r.Modelo))].filter(Boolean).sort();
+        // ═══════════════════════════════════════════════════════════
+        // COMPONENTE GENÉRICO: filtro multiselección (buscador, seleccionar
+        // todos/ninguno, chips eliminables). Se reutiliza para los 4
+        // filtros del Dashboard (departamento, región x2, producto).
+        //
+        // getItemsFn() debe devolver un array de { value, label }.
+        // onChangeFn(state) se llama cada vez que cambia la selección.
+        // ═══════════════════════════════════════════════════════════
+        function initDashMultiselect(prefix, getItemsFn, onChangeFn) {
+            const state = new Set();
+            const trigger = document.getElementById(`${prefix}-trigger`);
+            const panel = document.getElementById(`${prefix}-panel`);
+            const searchInput = document.getElementById(`${prefix}-search`);
+            const listEl = document.getElementById(`${prefix}-list`);
+            const summaryEl = document.getElementById(`${prefix}-summary`);
+            const chipsEl = document.getElementById(`${prefix}-chips`);
+            const selectAllBtn = document.getElementById(`${prefix}-select-all`);
+            const selectNoneBtn = document.getElementById(`${prefix}-select-none`);
 
-            listEl.innerHTML = '';
-            allProducts
-                .filter(p => p.toLowerCase().includes(searchTerm))
-                .forEach(p => {
-                    const item = document.createElement('label');
-                    item.className = 'dash-multiselect-item';
-                    const isChecked = dashSelectedProducts.has(p);
-                    item.innerHTML = `<input type="checkbox" value="${p}" ${isChecked ? 'checked' : ''}><span>${p}</span>`;
-                    item.querySelector('input').addEventListener('change', (e) => {
-                        if (e.target.checked) dashSelectedProducts.add(p);
-                        else dashSelectedProducts.delete(p);
-                        updateDashProductSummary();
-                        renderDashRegionBar();
+            function populate() {
+                const term = (searchInput.value || '').toLowerCase();
+                const items = getItemsFn();
+                listEl.innerHTML = '';
+                items
+                    .filter(it => it.label.toLowerCase().includes(term))
+                    .forEach(it => {
+                        const item = document.createElement('label');
+                        item.className = 'dash-multiselect-item';
+                        const checked = state.has(it.value);
+                        item.innerHTML = `<input type="checkbox" value="${it.value}" ${checked ? 'checked' : ''}><span>${it.label}</span>`;
+                        item.querySelector('input').addEventListener('change', (e) => {
+                            if (e.target.checked) state.add(it.value); else state.delete(it.value);
+                            updateSummary();
+                            onChangeFn(state);
+                        });
+                        listEl.appendChild(item);
                     });
-                    listEl.appendChild(item);
-                });
+                updateSummary();
+            }
 
-            updateDashProductSummary();
-        }
+            function updateSummary() {
+                if (state.size === 0) {
+                    summaryEl.textContent = summaryEl.dataset.defaultLabel || 'Todos';
+                    chipsEl.innerHTML = '';
+                    return;
+                }
+                summaryEl.textContent = `${state.size} seleccionado${state.size > 1 ? 's' : ''}`;
 
-        function updateDashProductSummary() {
-            const summaryEl = document.getElementById('dash-product-summary');
-            const chipsEl = document.getElementById('dash-product-chips');
-
-            if (dashSelectedProducts.size === 0) {
-                summaryEl.textContent = 'Todos los productos';
+                const items = getItemsFn();
                 chipsEl.innerHTML = '';
-                return;
+                [...state].forEach(val => {
+                    const match = items.find(it => it.value === val);
+                    const label = match ? match.label : val;
+                    const chip = document.createElement('div');
+                    chip.className = 'dash-chip';
+                    chip.innerHTML = `<span>${label}</span>`;
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.innerHTML = '<i data-lucide="x" style="width:11px;height:11px;"></i>';
+                    btn.addEventListener('click', () => {
+                        state.delete(val);
+                        populate();
+                        onChangeFn(state);
+                    });
+                    chip.appendChild(btn);
+                    chipsEl.appendChild(chip);
+                });
+                lucide.createIcons();
             }
 
-            summaryEl.textContent = `${dashSelectedProducts.size} seleccionado${dashSelectedProducts.size > 1 ? 's' : ''}`;
-
-            chipsEl.innerHTML = '';
-            [...dashSelectedProducts].forEach(p => {
-                const chip = document.createElement('div');
-                chip.className = 'dash-chip';
-                chip.innerHTML = `<span>${p}</span>`;
-                const removeBtn = document.createElement('button');
-                removeBtn.type = 'button';
-                removeBtn.innerHTML = '<i data-lucide="x" style="width:11px;height:11px;"></i>';
-                removeBtn.addEventListener('click', () => {
-                    dashSelectedProducts.delete(p);
-                    populateDashProductList();
-                    renderDashRegionBar();
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                document.querySelectorAll('.dash-multiselect-panel.show').forEach(p => {
+                    if (p !== panel) p.classList.remove('show');
                 });
-                chip.appendChild(removeBtn);
-                chipsEl.appendChild(chip);
+                panel.classList.toggle('show');
             });
-            lucide.createIcons();
+            searchInput.addEventListener('input', populate);
+            selectAllBtn.addEventListener('click', () => {
+                getItemsFn().forEach(it => state.add(it.value));
+                populate();
+                onChangeFn(state);
+            });
+            selectNoneBtn.addEventListener('click', () => {
+                state.clear();
+                populate();
+                onChangeFn(state);
+            });
+
+            return { getState: () => state, populate };
         }
 
-        // Listeners del multiselect — se registran una sola vez, ya que
-        // estos elementos existen desde el primer momento en el HTML
-        // (no se recrean como las pestañas de departamento).
-        document.getElementById('dash-product-trigger').addEventListener('click', (e) => {
-            e.stopPropagation();
-            document.getElementById('dash-product-panel').classList.toggle('show');
-        });
+        // Cierra cualquier panel de multiselección abierto al hacer clic fuera
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('#dash-product-multiselect')) {
-                document.getElementById('dash-product-panel').classList.remove('show');
+            if (!e.target.closest('.dash-multiselect')) {
+                document.querySelectorAll('.dash-multiselect-panel.show').forEach(p => p.classList.remove('show'));
             }
         });
-        document.getElementById('dash-product-search').addEventListener('input', populateDashProductList);
-        document.getElementById('dash-select-all').addEventListener('click', () => {
-            dashSelectedProducts = new Set(stockData.map(r => r.Modelo).filter(Boolean));
-            populateDashProductList();
-            renderDashRegionBar();
-        });
-        document.getElementById('dash-select-none').addEventListener('click', () => {
-            dashSelectedProducts = new Set();
-            populateDashProductList();
-            renderDashRegionBar();
-        });
+
+        // ── Instancias de los 4 filtros ──
+        const dashFilterDeptRegion = initDashMultiselect(
+            'dash-dept-region',
+            () => {
+                const ids = [...new Set(stockData.map(r => cleanFamilyId(r.Familia)))].filter(Boolean);
+                return ids.map(id => ({ value: id, label: friendlyDeptLabel(id) }));
+            },
+            () => renderDashRegionDonut()
+        );
+
+        const dashFilterRegionGfk = initDashMultiselect(
+            'dash-region-gfk',
+            () => {
+                const regions = [...new Set(stockData.filter(r => cleanFamilyId(r.Familia) === '28').map(r => r.Region))].filter(Boolean).sort();
+                return regions.map(r => ({ value: r, label: r }));
+            },
+            () => renderDashGfkDonut()
+        );
+
+        const dashFilterProduct = initDashMultiselect(
+            'dash-product',
+            () => {
+                const products = [...new Set(stockData.map(r => r.Modelo))].filter(Boolean).sort();
+                return products.map(p => ({ value: p, label: p }));
+            },
+            () => renderDashRegionBar()
+        );
+
+        const dashFilterRegionDept = initDashMultiselect(
+            'dash-region-dept',
+            () => {
+                const regions = [...new Set(stockData.map(r => r.Region))].filter(Boolean).sort();
+                return regions.map(r => ({ value: r, label: r }));
+            },
+            () => renderDashDepartmentBar()
+        );
+
+        document.getElementById('dash-product-summary').dataset.defaultLabel = 'Todos los productos';
+        document.getElementById('dash-region-gfk-summary').dataset.defaultLabel = 'Todas';
+        document.getElementById('dash-region-dept-summary').dataset.defaultLabel = 'Todas las regiones';
     </script>
+
 
     <script>
         // Registro del service worker para que la app sea instalable (PWA).

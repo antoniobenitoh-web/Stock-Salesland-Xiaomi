@@ -33,6 +33,30 @@ una URL de script.google.com**.
 
 He verificado que `npm run build` termina sin errores con estos cambios.
 
+### Correcciones aplicadas tras las primeras pruebas
+
+- **Bug de navegación arreglado**: al entrar en Dashboard, sin querer se
+  ocultaban también las propias pestañas de navegación (General,
+  departamentos), dejando sin forma de volver a Inventario salvo
+  cerrando sesión. Ahora las pestañas de navegación permanecen siempre
+  visibles; solo se ocultan el contenido y los controles que son
+  exclusivos de la vista Inventario (KPIs, tablas, sidebar, búsqueda).
+- **Gráfico 1** renombrado a "Global Stock por Región" y ahora tiene su
+  propio filtro multiselección de **departamento** (vacío = todos/total).
+- **Gráfico 2** (Telefonía 28 por Segmento GFK) ahora tiene un filtro
+  multiselección de **región** (vacío = todas).
+- **Gráfico 3** renombrado a "Detalle Stock por Región". Pasa a ser
+  siempre horizontal (antes vertical), porque las etiquetas de datos no
+  se leían bien en vertical en móvil.
+- **Gráfico 4** (Stock por Departamento) ahora tiene un filtro
+  multiselección de **región**. Además, las etiquetas de datos se
+  movieron a **fuera de la barra** (justo después de la punta) en vez de
+  centradas encima — así nunca quedan como texto oscuro ilegible sobre
+  una barra oscura.
+- Los 4 filtros comparten un mismo componente reutilizable
+  (`initDashMultiselect`), así que si en el futuro quieres añadir más
+  filtros a algún gráfico, es una llamada más a esa función.
+
 ## 📊 Dashboard Ejecutivo (nueva vista, no rompe nada de lo existente)
 
 Se ha añadido un icono **📊 Dashboard** a la izquierda de "General" en la
