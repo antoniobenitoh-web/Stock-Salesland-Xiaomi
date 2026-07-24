@@ -16,6 +16,13 @@
 //     (login + stock en una sola llamada — la usa el login del frontend
 //     para no hacer dos viajes seguidos)
 //
+//   GET ?action=checkVersion&callback=xxx
+//     -> xxx({ success: true, fechaCierre }) | xxx({ success:false, error })
+//     (comprobación barata de si hay stock nuevo: no lleva usuario, no
+//     manda el array de datos, solo la fecha de cierre. La usa el
+//     frontend antes de decidir si merece la pena pedir "getStock" o si
+//     la copia que ya tiene en localStorage sigue siendo la vigente)
+//
 // IMPORTANTE: se usa JSONP (respuesta envuelta en una función callback,
 // cargada como <script src="...">) y NO fetch(), porque Apps Script Web
 // Apps no añade las cabeceras CORS necesarias para que fetch() pueda
@@ -111,6 +118,9 @@ function doPost(e) {
     case 'initialize':
       resultObj = computeInitialize(body);
       break;
+    case 'checkVersion':
+      resultObj = computeCheckVersion();
+      break;
     default:
       resultObj = { success: false, error: 'Acción no reconocida: ' + body.action };
   }
@@ -135,6 +145,8 @@ function routeAction(action, payloadStr) {
         return computeGetStock(payload);
       case 'initialize':
         return computeInitialize(payload);
+      case 'checkVersion':
+        return computeCheckVersion();
       default:
         return { success: false, error: 'Acción no reconocida: ' + action };
     }
@@ -219,6 +231,24 @@ function computeInitialize(payload) {
     fechaCierre: stockResult.fechaCierre,
     datos: stockResult.datos
   };
+}
+
+// OPTIMIZACIÓN: comprobación "barata" de si hay stock nuevo. No recibe
+// usuario ni filtra por rol (la fecha de cierre es la misma para
+// todos), y no manda el array de datos — solo la fecha de la columna L.
+// El frontend la usa así: si coincide con lo que ya tiene en
+// localStorage, no hace falta pedir ni procesar nada más; si es
+// distinta, entonces sí pide el stock completo con "getStock". Esto
+// evita transferir y filtrar por rol todo el array de stock cuando en
+// realidad no ha cambiado nada desde la última vez (el caso más
+// habitual del día, ya que "informe" solo se actualiza una vez).
+function computeCheckVersion() {
+  try {
+    const raw = getRawStockData(); // misma caché de 6h de siempre; no fuerza relectura
+    return { success: true, fechaCierre: raw.fechaCierre };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
 }
 
 // ─────────────────────────────────────────

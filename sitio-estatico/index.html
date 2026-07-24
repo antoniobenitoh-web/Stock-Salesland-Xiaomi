@@ -1027,12 +1027,19 @@
                     { success: true, fechaCierre: cached.fechaCierre, datos: cached.datos, permisos: cached.permisos || currentPermisos },
                     { silent: false }
                 );
-                // ...y de fondo, sin bloquear nada, se comprueba si hay
-                // una versión más reciente (normalmente la del cierre de
-                // hoy, sobre todo si ya ha pasado la actualización de
-                // ~10:00). Si la hay, se actualiza la pantalla sola.
-                callBackend('getStock', { user: currentUser }).then((resp) => {
-                    if (resp.success) applyStockResponse(resp, { silent: true });
+                // ...y de fondo, sin bloquear nada, primero preguntamos
+                // solo la fecha de cierre (barato: no lleva usuario, no
+                // manda el array de stock). Si sigue siendo la misma que
+                // ya tenemos cacheada, no hace falta pedir ni procesar
+                // nada más. Si cambió, entonces sí pedimos el stock
+                // completo con getStock y actualizamos la pantalla sola.
+                callBackend('checkVersion', {}).then((verResp) => {
+                    if (!verResp.success) return; // si falla la comprobación, nos quedamos con lo que ya había en pantalla
+                    if (verResp.fechaCierre === cached.fechaCierre) return; // sin cambios: no se pide nada más
+
+                    callBackend('getStock', { user: currentUser }).then((resp) => {
+                        if (resp.success) applyStockResponse(resp, { silent: true });
+                    });
                 });
                 return;
             }

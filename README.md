@@ -99,6 +99,18 @@ Dashboard (visible siempre) y el resto de pestañas de departamento;
 haz clic en cualquier pestaña de departamento o en "General" para volver
 a Inventario.
 
+- **Comprobación barata de versión (`checkVersion`)**: antes, cada vez
+  que reabrías la app con caché ya guardada, se lanzaba en segundo plano
+  un `getStock` completo (procesa y filtra por rol todo el array) solo
+  para comprobar si había algo nuevo, aunque casi siempre no lo hubiera.
+  Ahora primero se pregunta solo la fecha de cierre (columna L de
+  `informe`) con `checkVersion` — no lleva usuario ni manda el array de
+  datos. Si coincide con lo que ya había en `localStorage`, no se pide
+  ni procesa nada más; si es distinta, entonces sí se pide el stock
+  completo con `getStock` y la pantalla se actualiza sola. En la
+  práctica, la inmensa mayoría de aperturas del día ya no disparan
+  ningún `getStock` de fondo en absoluto, solo esta comprobación mínima.
+
 ## ⚡ Optimizaciones de rendimiento aplicadas
 
 - **Una sola llamada al backend en el login (`initialize`)**: antes el
