@@ -133,18 +133,23 @@ a Inventario.
 - **Caché de servidor de 6 horas** (`CacheService`, el máximo que
   permite Apps Script) — la mayoría de peticiones del día se sirven
   desde memoria sin volver a tocar Sheets.
-- **`warmStockCache()` con disparador de tiempo**: mantiene la caché de
-  servidor siempre caliente en segundo plano. Como sabes que `informe`
-  se actualiza sobre las 10:00, te recomiendo poner **dos** disparadores
-  a esa función (Apps Script → icono ⏰ "Activadores" → "+ Añadir
-  activador"):
-  1. Uno **diario, a las 10:15** (justo después de la actualización) —
-     así la caché se refresca con los datos del día casi al momento de
-     publicarse, sin esperar al ciclo periódico.
-  2. Otro **cada 4 horas** como red de seguridad general, por si algún
-     día la actualización se retrasa.
-- **Botón "🔄 Actualizar"** para forzar una relectura real cuando haga
-  falta, ignorando toda caché (servidor y navegador).
+- **Botón "🔄 Actualizar" — ahora solo para `am`/`administradora`**: el
+  refresco manual (forzar relectura real, ignorando toda caché) ya no lo
+  ve ni lo puede usar ningún otro rol — ni siquiera manipulando la
+  llamada a mano, el backend lo ignora si el rol no es `am` o
+  `administradora`. La idea es que la persona que actualiza `informe`
+  por la mañana pulse este botón justo después de terminar, y así todo
+  el mundo recibe la versión nueva casi al instante (en vez de esperar a
+  que caduque la caché de 6h sola).
+- **`warmStockCache()` — disparador de tiempo como red de respaldo**:
+  ya no hace falta para el día a día (para eso está el botón manual de
+  arriba), pero es una buena red de seguridad silenciosa por si un día
+  se olvida pulsarlo: pon un disparador **diario a las 10:00** (Apps
+  Script → icono ⏰ "Activadores" → "+ Añadir activador" → función
+  `warmStockCache` → "Basado en tiempo" → "Temporizador de día" → hora
+  10:00). Si ese día nadie fuerza la actualización manual, como mucho la
+  caché tardará hasta 6h en autocorregirse sola (por el TTL), nunca se
+  queda desactualizada indefinidamente.
 
 Con esto, el único momento en que de verdad se nota una espera real es
 la primerísima vez que un usuario concreto abre la app en un navegador

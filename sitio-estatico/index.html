@@ -521,7 +521,7 @@
             <div class="nav-right-date">
                 <i data-lucide="calendar" style="width:14px; height:14px; color:var(--xiaomi-orange);"></i>
                 <span>actualizado cierre: <strong id="lbl-fecha-cierre">...</strong></span>
-                <button id="btn-force-refresh" title="Forzar actualización desde Google Sheets (ignora la caché de hasta 6h)" style="background:none; border:none; cursor:pointer; color:#e9ecef; display:flex; align-items:center; padding:0; margin-left:4px;">
+                <button id="btn-force-refresh" title="Forzar actualización desde Google Sheets (ignora la caché de hasta 6h) — solo AM/Administradora" style="background:none; border:none; cursor:pointer; color:#e9ecef; display:none; align-items:center; padding:0; margin-left:4px;">
                     <i data-lucide="refresh-cw" style="width:13px; height:13px;"></i>
                 </button>
             </div>
@@ -1077,6 +1077,7 @@
             saveStockCache(currentUser.usuario, responseFromServer.fechaCierre, responseFromServer.datos, currentPermisos);
 
             applyPermisosToFilters();
+            applyRoleBasedUI();
             if (!opts.silent) {
                 buildIconsOnlyMenu();
             }
@@ -1086,6 +1087,15 @@
             if (!opts.silent) {
                 setupEventListeners();
             }
+        }
+
+        // Controles que solo deben verse para ciertos roles (no es la
+        // seguridad real — esa la aplica siempre el backend — es solo
+        // para no mostrar botones que a ese rol no le sirven de nada).
+        function applyRoleBasedUI() {
+            const rol = ((currentUser && currentUser.rol) || '').toString().trim().toLowerCase();
+            const puedeForzarActualizacion = rol === 'am' || rol === 'administradora';
+            document.getElementById('btn-force-refresh').style.display = puedeForzarActualizacion ? 'flex' : 'none';
         }
 
         function onDataLoadFailure(error) {

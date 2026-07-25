@@ -186,7 +186,16 @@ function computeGetStock(payload) {
     if (!payload.user || !payload.user.usuario) {
       return { success: false, error: 'Sesión no válida. Vuelve a iniciar sesión.' };
     }
-    const resultado = getStockDataSecure(payload.user, !!payload.forceRefresh);
+
+    // Solo "am" y "administradora" pueden forzar una relectura real de
+    // la hoja (ignorando la caché de 6h). Cualquier otro rol que mande
+    // forceRefresh:true (por error, o manipulando la llamada a mano) se
+    // ignora silenciosamente y se sirve como una petición normal.
+    const rolNormalizado = (payload.user.rol || '').toString().trim().toLowerCase();
+    const puedeForzar = rolNormalizado === 'am' || rolNormalizado === 'administradora';
+    const forceRefresh = !!payload.forceRefresh && puedeForzar;
+
+    const resultado = getStockDataSecure(payload.user, forceRefresh);
     return {
       success: true,
       fechaCierre: resultado.fechaCierre,
