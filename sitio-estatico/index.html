@@ -123,16 +123,18 @@
         .pill-input-wrapper {
             background-color: #ffffff; color: #1e293b;
             border-radius: 16px; min-height: 52px; padding: 6px 16px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            box-shadow: none !important;
             border: 1px solid rgba(255, 255, 255, 0.2);
             display: flex; align-items: center; justify-content: space-between; gap: 10px;
             transition: all 0.2s ease;
         }
         .pill-input-wrapper:focus-within {
-            box-shadow: 0 0 0 2px #00c4cc, 0 8px 20px rgba(0, 0, 0, 0.15);
+            box-shadow: none !important;
+            border-color: #00c4cc;
         }
         .pill-input-wrapper .input-content {
             display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;
+            background: transparent !important;
         }
         .google-icon {
             width: 20px; height: 20px; flex-shrink: 0; display: block;
@@ -141,11 +143,23 @@
             width: 18px; height: 18px; color: #94a3b8; flex-shrink: 0;
         }
         .pill-input-wrapper input {
-            width: 100%; background: transparent; border: none; outline: none;
+            width: 100%; background: transparent !important; border: none !important; outline: none !important;
             font-size: 14px; font-weight: 500; color: #1e293b; font-family: var(--font);
+            box-shadow: none !important;
         }
         .pill-input-wrapper input::placeholder {
             color: #94a3b8; font-weight: 400;
+        }
+
+        /* Elimina la sombra y el fondo azulado de autocompletado en navegadores (Chrome / Safari / Edge) */
+        .pill-input-wrapper input:-webkit-autofill,
+        .pill-input-wrapper input:-webkit-autofill:hover, 
+        .pill-input-wrapper input:-webkit-autofill:focus, 
+        .pill-input-wrapper input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+            -webkit-text-fill-color: #1e293b !important;
+            box-shadow: 0 0 0 1000px #ffffff inset !important;
+            transition: background-color 5000s ease-in-out 0s;
         }
 
         .btn-toggle-eye {
@@ -555,8 +569,8 @@
 
             <!-- 2. Título de la app y mensaje corporativo -->
             <div class="welcome-body">
-                <h1 class="welcome-title">Control de Stock<br>Espacios de Marca</h1>
-                <p class="welcome-desc">Controla, verifica y consulta el inventario de tu espacio de marca en tiempo real.</p>
+                <h1 class="welcome-title">Control de Stock</h1>
+                <p class="welcome-desc">Controla, verifica y consulta el inventario/stock de tu Pdv.</p>
             </div>
 
             <!-- 3. Formulario corporativo con inputs píldora -->
