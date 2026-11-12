@@ -47,39 +47,141 @@
         }
         .spinner { width: 40px; height: 40px; border: 4px solid var(--border-color); border-top: 4px solid var(--xiaomi-orange); border-radius: 50%; animation: spin 1s linear infinite; }
 
-        /* PANTALLA DE LOGIN */
+        /* PANTALLA DE LOGIN CORPORATIVA (VISUALAPPAUDITS) */
         .login-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, var(--salesland-blue) 0%, #0b3444 100%);
-            z-index: 9998; display: flex; align-items: center; justify-content: center; padding: 16px;
+            background: linear-gradient(to bottom, #041d27 0%, #07303e 50%, #031720 100%);
+            z-index: 9998; display: flex; align-items: center; justify-content: center; padding: 0;
         }
-        .login-card {
-            background-color: #ffffff; border-radius: var(--radius); box-shadow: 0 12px 40px rgba(0,0,0,0.25);
-            padding: 32px 28px; width: 100%; max-width: 340px;
+        @media (min-width: 640px) {
+            .login-screen { padding: 24px; }
         }
-        .login-logos { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px; }
-        .login-logos img { height: 26px; width: auto; object-fit: contain; }
-        .login-title { text-align: center; font-size: 1rem; font-weight: 700; color: var(--salesland-blue); margin-bottom: 20px; }
-        .login-field { margin-bottom: 14px; }
-        .login-field label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
-        .login-field input {
-            width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;
-            font-size: 0.9rem; outline: none;
+
+        .welcome-card {
+            width: 100%; height: 100dvh;
+            display: flex; flex-direction: column; justify-content: space-between;
+            padding: 26px 22px;
+            background: linear-gradient(to bottom, #084859 0%, #09576a 50%, #036074 100%);
+            color: #ffffff;
+            position: relative; overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: none;
         }
-        .login-field input:focus { border-color: var(--xiaomi-orange); }
-        .btn-login {
-            width: 100%; padding: 11px; background-color: var(--xiaomi-orange); border: none; border-radius: 8px;
-            color: #fff; font-weight: 700; cursor: pointer; font-size: 0.9rem; margin-top: 4px;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
+        @media (min-width: 640px) {
+            .welcome-card {
+                height: auto; min-height: 620px; max-height: min(740px, 90vh); max-width: 410px;
+                border-radius: 32px; border: 1px solid rgba(255, 255, 255, 0.15);
+                padding: 32px 30px;
+            }
         }
-        .btn-login:hover { opacity: 0.92; }
-        .btn-login:disabled { opacity: 0.6; cursor: not-allowed; }
-        .login-error {
-            background-color: #fff5f5; color: #e03131; border: 1px solid #ffc9c9; border-radius: 8px;
-            padding: 8px 12px; font-size: 0.78rem; margin-bottom: 14px; display: none;
+
+        .welcome-waves {
+            position: absolute; inset: 0; pointer-events: none; overflow: hidden; select-none: none; z-index: 1;
         }
-        .login-error.show { display: block; }
-        .login-footnote { text-align: center; font-size: 0.68rem; color: var(--text-muted); margin-top: 14px; }
+        .welcome-waves svg {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+
+        .welcome-header {
+            position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding-top: 4px;
+        }
+        .brand-salesland img {
+            height: 30px; width: auto; object-fit: contain; filter: brightness(1.05); display: block;
+        }
+        .header-right {
+            display: flex; align-items: center; gap: 12px;
+        }
+        .brand-divider {
+            height: 28px; width: 1px; background-color: rgba(255, 255, 255, 0.25);
+        }
+        .brand-xiaomi {
+            width: 40px; height: 40px; border-radius: 12px; overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .brand-xiaomi img {
+            width: 100%; height: 100%; object-fit: cover; display: block;
+        }
+
+        .welcome-body {
+            position: relative; z-index: 10; margin: auto 0; padding: 24px 0;
+        }
+        .welcome-title {
+            color: #ffffff; font-weight: 900; font-size: 34px; line-height: 1.15;
+            letter-spacing: -0.02em; margin-bottom: 12px; font-family: var(--font);
+        }
+        @media (max-width: 400px) {
+            .welcome-title { font-size: 29px; }
+        }
+        .welcome-desc {
+            color: rgba(255, 255, 255, 0.9); font-size: 13.5px; font-weight: 500;
+            line-height: 1.45; max-width: 285px; font-family: var(--font);
+        }
+
+        .welcome-form {
+            position: relative; z-index: 10; display: flex; flex-direction: column; gap: 12px; padding-bottom: 8px;
+        }
+        .pill-input-wrapper {
+            background-color: #ffffff; color: #1e293b;
+            border-radius: 16px; min-height: 52px; padding: 6px 16px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
+            transition: all 0.2s ease;
+        }
+        .pill-input-wrapper:focus-within {
+            box-shadow: 0 0 0 2px #00c4cc, 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+        .pill-input-wrapper .input-content {
+            display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;
+        }
+        .google-icon {
+            width: 20px; height: 20px; flex-shrink: 0; display: block;
+        }
+        .input-lock-icon {
+            width: 18px; height: 18px; color: #94a3b8; flex-shrink: 0;
+        }
+        .pill-input-wrapper input {
+            width: 100%; background: transparent; border: none; outline: none;
+            font-size: 14px; font-weight: 500; color: #1e293b; font-family: var(--font);
+        }
+        .pill-input-wrapper input::placeholder {
+            color: #94a3b8; font-weight: 400;
+        }
+
+        .btn-toggle-eye {
+            background: transparent; border: none; cursor: pointer; padding: 4px;
+            color: #94a3b8; display: flex; align-items: center; justify-content: center;
+            border-radius: 8px; transition: color 0.15s ease; flex-shrink: 0;
+        }
+        .btn-toggle-eye:hover { color: #334155; }
+        .btn-toggle-eye i { width: 18px; height: 18px; }
+
+        .login-error-badge {
+            background-color: rgba(76, 5, 25, 0.75); color: #fecdd3;
+            border: 1px solid rgba(244, 63, 94, 0.45);
+            padding: 8px 12px; border-radius: 12px; font-size: 11.5px; font-weight: 700;
+            text-align: center; backdrop-filter: blur(4px); display: none;
+        }
+        .login-error-badge.show { display: block !important; }
+
+        .btn-welcome-submit {
+            width: 100%; min-height: 52px;
+            background-color: #00a2ac; color: #ffffff;
+            font-weight: 800; font-size: 16px; border: none; border-radius: 16px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 6px 20px rgba(0, 162, 172, 0.35);
+            transition: all 0.2s ease; margin-top: 4px; font-family: var(--font);
+        }
+        .btn-welcome-submit:hover {
+            background-color: #008f98; transform: translateY(-1px);
+            box-shadow: 0 8px 24px rgba(0, 162, 172, 0.45);
+        }
+        .btn-welcome-submit:active {
+            transform: scale(0.98);
+        }
+        .btn-welcome-submit:disabled {
+            opacity: 0.6; cursor: not-allowed; transform: none;
+        }
 
         .btn-logout { width: 100%; padding: 10px; background-color: rgba(224, 49, 49, 0.15); border: 1px solid rgba(224, 49, 49, 0.4); border-radius: 8px; color: #ff8787; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; }
         .btn-logout:hover { background-color: rgba(224, 49, 49, 0.28); }
@@ -428,28 +530,67 @@
 <body>
 
     <div class="login-screen" id="login-screen" style="display:none;">
-        <div class="login-card">
-            <div class="login-logos">
-                <img src="https://lh3.googleusercontent.com/d/1M-Z2J2bxhZX5Z10wa8J6JX2aIQMMkZ8A" alt="Salesland">
-                <span style="color:#ccc; font-weight:300;">|</span>
-                <img src="https://lh3.googleusercontent.com/d/10TTfNsgIyjTowOZyr5Cd0yxjbMXBoEGm" alt="Xiaomi">
+        <div class="welcome-card">
+            <!-- Ondas decorativas de fondo vectoriales como en VISUALAPPAUDITS -->
+            <div class="welcome-waves">
+                <svg viewBox="0 0 360 640" preserveAspectRatio="none">
+                    <path d="M-50 490 Q 90 420 240 470 T 420 450 L 420 640 L -50 640 Z" fill="#00808b" opacity="0.45" />
+                    <path d="M-50 540 Q 120 470 260 530 T 420 510 L 420 640 L -50 640 Z" fill="#009ca6" opacity="0.5" />
+                    <path d="M-50 590 Q 140 530 280 580 T 420 570 L 420 640 L -50 640 Z" fill="#00b8c4" opacity="0.35" />
+                </svg>
             </div>
-            <div class="login-title">Acceso Dashboard de Stock</div>
-            <div class="login-error" id="login-error"></div>
-            <form id="login-form">
-                <div class="login-field">
-                    <label>Usuario</label>
-                    <input type="text" id="login-user" autocomplete="username" required>
+
+            <!-- 1. Cabecera oficial: Logo Salesland y Squircle Xiaomi -->
+            <div class="welcome-header">
+                <div class="brand-salesland">
+                    <img src="images/salesland_logo_transparent.png" alt="Salesland">
                 </div>
-                <div class="login-field">
-                    <label>Contraseña</label>
-                    <input type="password" id="login-pass" autocomplete="current-password" required>
+                <div class="header-right">
+                    <div class="brand-divider"></div>
+                    <div class="brand-xiaomi">
+                        <img src="images/xiaomi_logo.png" alt="Xiaomi">
+                    </div>
                 </div>
-                <button type="submit" class="btn-login" id="btn-login">
-                    <i data-lucide="log-in" style="width:16px; height:16px;"></i> Entrar
+            </div>
+
+            <!-- 2. Título de la app y mensaje corporativo -->
+            <div class="welcome-body">
+                <h1 class="welcome-title">Control de Stock<br>Espacios de Marca</h1>
+                <p class="welcome-desc">Controla, verifica y consulta el inventario de tu espacio de marca en tiempo real.</p>
+            </div>
+
+            <!-- 3. Formulario corporativo con inputs píldora -->
+            <form id="login-form" class="welcome-form">
+                <!-- Input Usuario con icono oficial multicolor Google -->
+                <div class="pill-input-wrapper">
+                    <div class="input-content">
+                        <svg class="google-icon" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                        </svg>
+                        <input type="text" id="login-user" autocomplete="username" placeholder="antoniobenitoh@salesland.net" required>
+                    </div>
+                </div>
+
+                <!-- Input Contraseña con candado y toggle para mostrar/ocultar -->
+                <div class="pill-input-wrapper">
+                    <div class="input-content">
+                        <i data-lucide="lock" class="input-lock-icon"></i>
+                        <input type="password" id="login-pass" autocomplete="current-password" placeholder="Contraseña" required>
+                    </div>
+                    <button type="button" id="btn-toggle-password" class="btn-toggle-eye" title="Mostrar/ocultar contraseña">
+                        <i data-lucide="eye"></i>
+                    </button>
+                </div>
+
+                <div class="login-error-badge" id="login-error"></div>
+
+                <button type="submit" class="btn-welcome-submit" id="btn-login">
+                    Comenzar
                 </button>
             </form>
-            <p class="login-footnote">Acceso con tu usuario y contraseña de Salesland | Xiaomi.</p>
         </div>
     </div>
 
@@ -956,6 +1097,21 @@
                 icon.setAttribute('data-lucide', collapsed ? 'chevron-down' : 'chevron-up');
                 lucide.createIcons();
             });
+
+            // Toggle para mostrar/ocultar contraseña con icono dinámico
+            const btnTogglePass = document.getElementById('btn-toggle-password');
+            const passInput = document.getElementById('login-pass');
+            if (btnTogglePass && passInput) {
+                btnTogglePass.addEventListener('click', () => {
+                    const isPass = passInput.type === 'password';
+                    passInput.type = isPass ? 'text' : 'password';
+                    const icon = btnTogglePass.querySelector('i');
+                    if (icon) {
+                        icon.setAttribute('data-lucide', isPass ? 'eye-off' : 'eye');
+                        lucide.createIcons();
+                    }
+                });
+            }
 
             // ─────────────────────────────────────────
             // PERSISTENCIA DE SESIÓN: localStorage
