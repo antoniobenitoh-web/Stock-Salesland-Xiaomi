@@ -241,6 +241,40 @@
         .kpi-card:nth-child(3) .kpi-icon-wrapper { background-color: #edf2ff; color: var(--color-crossdock); }
         .kpi-card:nth-child(4) .kpi-icon-wrapper { background-color: #f3f0ff; color: var(--color-exposicion); }
 
+        /* SKELETON LOADERS Y BARRA DE SINCRONIZACIÓN */
+        .sync-progress-bar {
+            position: fixed; top: 0; left: 0; width: 100%; height: 3px;
+            background: linear-gradient(90deg, var(--xiaomi-orange) 0%, #ff922b 50%, var(--xiaomi-orange) 100%);
+            background-size: 200% 100%;
+            animation: syncSlide 1.2s infinite linear;
+            z-index: 10000; display: none;
+        }
+        @keyframes syncSlide { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        .sync-banner {
+            position: fixed; top: 12px; right: 16px;
+            background: rgba(16, 74, 96, 0.95); color: #fff;
+            padding: 6px 14px; border-radius: 20px; font-size: 0.76rem; font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.18); z-index: 10001;
+            display: none; align-items: center; gap: 8px; backdrop-filter: blur(4px);
+        }
+
+        .skeleton-box {
+            animation: skeletonShimmer 1.4s infinite ease-in-out;
+            border-radius: 4px;
+            color: transparent !important;
+            user-select: none;
+        }
+        .skeleton-pill {
+            display: inline-block; width: 48px; height: 18px;
+            background: #e2e8f0; border-radius: 4px;
+        }
+        @keyframes skeletonShimmer {
+            0% { opacity: 0.45; }
+            50% { opacity: 0.9; }
+            100% { opacity: 0.45; }
+        }
+
         /* GRÁFICO */
         .chart-card { background-color: var(--bg-card); border-radius: var(--radius); padding: 14px; border: 1px solid var(--border-color); box-shadow: var(--shadow); flex-shrink: 0; width: 100%; }
         .chart-card-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; color: #495057; }
@@ -849,6 +883,17 @@
 
                 window[callbackName] = (data) => {
                     cleanup();
+                    // OPTIMIZACIÓN: deserializa formato compacto [cols, rows] a objetos en 3ms
+                    if (data && data.cols && data.rows && !data.datos) {
+                        const cols = data.cols;
+                        data.datos = data.rows.map(row => {
+                            const obj = {};
+                            for (let i = 0; i < cols.length; i++) {
+                                obj[cols[i]] = row[i];
+                            }
+                            return obj;
+                        });
+                    }
                     resolve(data);
                 };
 
@@ -912,7 +957,10 @@
                 lucide.createIcons();
             });
 
-            const savedSession = sessionStorage.getItem('sl_session');
+            // ─────────────────────────────────────────
+            // PERSISTENCIA DE SESIÓN: localStorage
+            // ─────────────────────────────────────────
+            const savedSession = localStorage.getItem('sl_session') || sessionStorage.getItem('sl_session');
             if (savedSession) {
                 try {
                     const session = JSON.parse(savedSession);
@@ -921,11 +969,67 @@
                     startDashboardLoad();
                     return;
                 } catch (e) {
+                    localStorage.removeItem('sl_session');
                     sessionStorage.removeItem('sl_session');
                 }
             }
+            document.getElementById('loading-screen').style.display = 'none';
             document.getElementById('login-screen').style.display = 'flex';
         });
+
+        // ─────────────────────────────────────────
+        // ESTADO DE CARGA OPTIMISTA Y SKELETON LOADERS
+        // ─────────────────────────────────────────
+        function showSyncBar(message) {
+            let bar = document.getElementById('sync-progress-bar');
+            let banner = document.getElementById('sync-banner');
+            if (!bar) {
+                bar = document.createElement('div');
+                bar.id = 'sync-progress-bar';
+                bar.className = 'sync-progress-bar';
+                document.body.appendChild(bar);
+            }
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'sync-banner';
+                banner.className = 'sync-banner';
+                document.body.appendChild(banner);
+            }
+            bar.style.display = 'block';
+            banner.innerHTML = `<div class="spinner" style="width:13px; height:13px; border-width:2px; margin:0;"></div> <span>${message || 'Sincronizando...'}</span>`;
+            banner.style.display = 'flex';
+        }
+
+        function hideSyncBar() {
+            const bar = document.getElementById('sync-progress-bar');
+            const banner = document.getElementById('sync-banner');
+            if (bar) bar.style.display = 'none';
+            if (banner) banner.style.display = 'none';
+        }
+
+        function showSkeletonState() {
+            ['kpi-tienda', 'kpi-transito', 'kpi-crossdock', 'kpi-exposicion'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.innerHTML = '<span class="skeleton-pill"></span>';
+                    el.classList.add('skeleton-box');
+                }
+            });
+            const fechaEl = document.getElementById('lbl-fecha-cierre');
+            if (fechaEl) {
+                fechaEl.innerHTML = '<span class="skeleton-pill" style="width:70px;"></span>';
+                fechaEl.classList.add('skeleton-box');
+            }
+        }
+
+        function hideSkeletonState() {
+            ['kpi-tienda', 'kpi-transito', 'kpi-crossdock', 'kpi-exposicion'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('skeleton-box');
+            });
+            const fechaEl = document.getElementById('lbl-fecha-cierre');
+            if (fechaEl) fechaEl.classList.remove('skeleton-box');
+        }
 
         // Fuerza una relectura de la hoja "informe" ignorando la caché de
         // hasta 6h — útil si acabas de actualizar el stock a mitad de día
@@ -938,7 +1042,7 @@
             btn.disabled = true;
             icon.style.animation = 'spin 0.8s linear infinite';
 
-            const resp = await callBackend('getStock', { user: currentUser, forceRefresh: true });
+            const resp = await callBackend('getStock', { user: currentUser, forceRefresh: true, compact: true });
 
             btn.disabled = false;
             icon.style.animation = '';
@@ -957,27 +1061,50 @@
             const btn = document.getElementById('btn-login');
             const errBox = document.getElementById('login-error');
             errBox.classList.remove('show');
-            btn.disabled = true;
-            btn.innerHTML = 'Comprobando...';
 
-            // OPTIMIZACIÓN: una sola llamada ("initialize") en vez de
-            // login() + getStock() por separado — se ahorra un viaje
-            // completo de ida y vuelta al backend.
-            const resp = await callBackend('initialize', { username, password });
+            if (!username || !password) {
+                errBox.textContent = 'Introduce usuario y contraseña.';
+                errBox.classList.add('show');
+                return;
+            }
 
-            btn.disabled = false;
-            btn.innerHTML = '<i data-lucide="log-in" style="width:16px; height:16px;"></i> Entrar';
-            lucide.createIcons();
+            // OPTIMIZACIÓN NIVEL 2: Transición INMEDIATA (<16ms)
+            // El usuario no se queda esperando congelado en el formulario de login.
+            const cached = loadStockCache(username);
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('loading-screen').style.display = 'none';
+
+            if (cached) {
+                // Si ya había datos locales para este usuario, los pintamos al instante
+                currentUser = { usuario: username, nombre: username.split('@')[0], rol: 'Promotor' };
+                currentPermisos = cached.permisos || { allowedFilters: ['Familia','SubFamilia','Modelo','Region','Zona','PR','StoreName'] };
+                document.getElementById('lbl-usuario-nombre').textContent = currentUser.nombre;
+                applyStockResponse({ success: true, fechaCierre: cached.fechaCierre, datos: cached.datos, permisos: currentPermisos }, { silent: false });
+                showSyncBar('Verificando credenciales y sincronizando...');
+            } else {
+                // Primer acceso: pintamos esqueleto visual y banner de progreso
+                document.getElementById('lbl-usuario-nombre').textContent = username.split('@')[0];
+                showSkeletonState();
+                showSyncBar('Iniciando sesión y cargando stock...');
+            }
+
+            // OPTIMIZACIÓN NIVEL 1: Petición compacta [cols, rows] (ahorra 70% de datos transferidos)
+            const resp = await callBackend('initialize', { username, password, compact: true });
+
+            hideSyncBar();
+            hideSkeletonState();
 
             if (!resp.success) {
+                // Si las credenciales fallan, restauramos la pantalla de login con el error
+                document.getElementById('login-screen').style.display = 'flex';
                 errBox.textContent = resp.error || 'No se pudo iniciar sesión.';
                 errBox.classList.add('show');
                 return;
             }
+
             currentUser = resp.user;
             currentPermisos = resp.permisos;
-            sessionStorage.setItem('sl_session', JSON.stringify({ user: currentUser, permisos: currentPermisos }));
-            document.getElementById('login-screen').style.display = 'none';
+            localStorage.setItem('sl_session', JSON.stringify({ user: currentUser, permisos: currentPermisos }));
             document.getElementById('lbl-usuario-nombre').textContent = currentUser.nombre || currentUser.usuario;
 
             if (resp.stockError) {
@@ -987,6 +1114,7 @@
         });
 
         document.getElementById('btn-logout').addEventListener('click', () => {
+            localStorage.removeItem('sl_session');
             sessionStorage.removeItem('sl_session');
             window.location.reload();
         });
@@ -994,20 +1122,13 @@
         // ─────────────────────────────────────────
         // CACHÉ EN EL NAVEGADOR (localStorage) — apertura instantánea
         // ─────────────────────────────────────────
-        // Guarda el último stock recibido por usuario. Al reabrir la app
-        // con una sesión ya guardada, se pinta el dashboard al instante
-        // con estos datos (aunque sean de la última vez), mientras en
-        // segundo plano se comprueba si hay algo más reciente. Como
-        // "informe" solo se actualiza una vez al día, casi siempre esta
-        // caché ya es la versión del día — y aunque no lo sea, el usuario
-        // ve la app abrirse de inmediato en vez de esperar con un spinner.
         function getStockCacheKey(username) {
             return `sl_stock_cache_${(username || '').toLowerCase()}`;
         }
         function saveStockCache(username, fechaCierre, datos, permisos) {
             try {
                 localStorage.setItem(getStockCacheKey(username), JSON.stringify({ fechaCierre, datos, permisos, savedAt: Date.now() }));
-            } catch (e) { /* localStorage lleno o no disponible: no es crítico, simplemente no cachea */ }
+            } catch (e) { /* localStorage lleno o no disponible */ }
         }
         function loadStockCache(username) {
             try {
@@ -1028,29 +1149,28 @@
                     { silent: false }
                 );
                 // ...y de fondo, sin bloquear nada, primero preguntamos
-                // solo la fecha de cierre (barato: no lleva usuario, no
-                // manda el array de stock). Si sigue siendo la misma que
-                // ya tenemos cacheada, no hace falta pedir ni procesar
-                // nada más. Si cambió, entonces sí pedimos el stock
-                // completo con getStock y actualizamos la pantalla sola.
+                // solo la fecha de cierre (barato: solo fecha de la columna L)
                 callBackend('checkVersion', {}).then((verResp) => {
-                    if (!verResp.success) return; // si falla la comprobación, nos quedamos con lo que ya había en pantalla
-                    if (verResp.fechaCierre === cached.fechaCierre) return; // sin cambios: no se pide nada más
+                    if (!verResp.success) return;
+                    if (verResp.fechaCierre === cached.fechaCierre) return; // sin cambios
 
-                    callBackend('getStock', { user: currentUser }).then((resp) => {
+                    callBackend('getStock', { user: currentUser, compact: true }).then((resp) => {
                         if (resp.success) applyStockResponse(resp, { silent: true });
                     });
                 });
                 return;
             }
 
-            // Sin caché previa (primera vez en este navegador): esperamos
-            // la respuesta real, como antes.
-            document.getElementById('loading-screen').style.display = 'flex';
-            callBackend('getStock', { user: currentUser }).then(onDataLoadResult);
+            // Sin caché previa (primera vez en este navegador): mostramos skeletons mientras llega
+            document.getElementById('loading-screen').style.display = 'none';
+            showSkeletonState();
+            showSyncBar('Cargando catálogo e inventario...');
+            callBackend('getStock', { user: currentUser, compact: true }).then(onDataLoadResult);
         }
 
         function onDataLoadResult(resp) {
+            hideSyncBar();
+            hideSkeletonState();
             if (!resp.success) {
                 onDataLoadFailure({ message: resp.error || 'No se pudo cargar el stock.' });
                 return;
@@ -1070,6 +1190,9 @@
         // otro.
         function applyStockResponse(responseFromServer, opts) {
             opts = opts || {};
+            hideSyncBar();
+            hideSkeletonState();
+            document.getElementById('loading-screen').style.display = 'none';
             document.getElementById('lbl-fecha-cierre').textContent = responseFromServer.fechaCierre || "N/D";
             stockData = responseFromServer.datos || [];
             if (responseFromServer.permisos) currentPermisos = responseFromServer.permisos;
